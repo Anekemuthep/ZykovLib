@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Graph with Topics and Colors</title>
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    #container { height: 80vh; border: 1px solid #ccc; margin-top: 10px; }
+    select, button, input { margin-left: 10px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <label>Graph Expression:</label>
+  <input type="text" id="expression" size="80"
+         value="A :::: topic1 * (B + C) + D :::: topic2 * (C + E + F)">
+  <button onclick="loadGraph()">Render Graph</button>
+  <label>Filter by topic:</label>
+  <select id="topicSelect" onchange="filterByTopic(this.value)">
+    <option value="all">All</option>
+  </select>
+
+  <div id="container"></div>
+
+  <script>
+    let graph = null;
+    let renderer = null;
+    let topicColors = {};
+    let nodes = [];
+    let edges = [];
+
+    function hsvToHex(h, s, v) {
+      let f = (n, k = (n + h / 60) % 6) =>
+        v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+      const rgb = [f(5), f(3), f(1)].map(x =>
+        Math.round(x * 255).toString(16).padStart(2, '0'));
+      return `#${rgb.join('')}`;
+    }
+
+    function assignTopicColors(topics) {
+      topicColors = {};
+      const count = topics.length;
+      topics.forEach((t, i) => {
+        const hue = (360 / count) * i;
+        topicColors[t] = hsvToHex(hue, 0.5, 0.9);
+      });
+    }
+
+    function loadGraph() {
+      const expression = document.getElementById("expression").value;
+
+      fetch("http://localhost:8080/eval", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expression })
+      })
+        .then(response => {
+          if (!response.ok) throw new Error("Bad response from backend");
+          return response.json();
+        })
+        .then(data => {
+          if (renderer) renderer.kill();
+
+          nodes = data.nodes;
+          edges = data.edges;
+
+          const container = document.getElementById("container");
+          graph = { nodes: [], edges: [] };
+
+          const allTopics = Array.from(new Set(nodes.map(n => n.category).filter(Boolean)));
+          assignTopicColors(allTopics);
+
+          // Update combobox
+          const topicSelect = document.getElementById("topicSelect");
+          topicSelect.innerHTML = `<option value="all">All</option>`;
+          allTopics.forEach(topic => {
+            const opt = document.createElement("option");
+            opt.value = topic;
+            opt.innerText = topic;
+            topicSelect.appendChild(opt);
+          });
+
+          nodes.forEach((n, i) => {
+            graph.nodes.push({
+              id: n.nodeId,
+              label: n.nodeId,
+              x: Math.cos(i * 2 * Math.PI / nodes.length),
+              y: Math.sin(i * 2 * Math.PI / nodes.length),
+              size: 1.5,
+              color: topicColors[n.category] || '#888',
+              category: n.category || null
+            });
+          });
+
+          edges.forEach((e, i) => {
+            graph.edges.push({
+              id: "e" + i,
+              source: e[0],
+              target: e[1],
+              size: 1,
+              color: '#ccc'
+            });
+          });
+
+          renderer = new sigma({
+            graph,
+            container
+          });
+        })
+        .catch(err => alert("Error loading graph: " + err.message));
+    }
+
+    function filterByTopic(topic) {
+      if (!renderer) return;
+      const graphObj = renderer.getGraph();
+      graphObj.nodes().forEach((node, id) => {
+        const n = nodes.find(n => n.nodeId === id);
+        node.hidden = topic !== "all" && n?.category !== topic;
+      });
+      renderer.refresh();
+    }
+  </script>
+</body>
+</html>
