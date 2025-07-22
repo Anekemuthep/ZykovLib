@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ZykovLang Topic Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
+    #controls { padding: 1em; background: #f4f4f4; display: flex; flex-wrap: wrap; align-items: center; gap: 1em; }
+    #graph-container { flex-grow: 1; height: 100%; }
+    input[type=text] { flex-grow: 1; padding: 0.5em; min-width: 200px; }
+    button, select { padding: 0.5em 1em; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <input id="expr" type="text" value="A::topic * (B + C) + D" />
+    <button onclick="loadGraph()">Render Graph</button>
+    <label for="category-select">Filter by topic:</label>
+    <select id="category-select" onchange="onCategoryChange()">
+      <option value="all">All</option>
+    </select>
+  </div>
+
+  <div id="graph-container"></div>
+
+  <script>
+    let fullGraph = { nodes: [], edges: [] };
+
+    async function loadGraph() {
+      const expression = document.getElementById("expr").value;
+      const response = await fetch("http://localhost:8080/eval", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expression })
+      });
+
+      const data = await response.json();
+      fullGraph = buildGraph(data.nodes, data.edges);
+      populateCategorySelect(data.nodes);
+      renderGraph(fullGraph);
+    }
+
+    function buildGraph(nodes, edges) {
+      return {
+        nodes: nodes.map((n, i) => ({
+          id: n.nodeId,
+          label: n.nodeId,
+          x: Math.cos(i * 2 * Math.PI / nodes.length),
+          y: Math.sin(i * 2 * Math.PI / nodes.length),
+          size: n.category ? 12 : 6,
+          color: n.category ? "#e91e63" : "#4682b4",
+          category: n.category || null
+        })),
+        edges: edges.map(([s, t], i) => ({ id: "e" + i, source: s, target: t, color: "#aaa" }))
+      };
+    }
+
+    function renderGraph(graph) {
+      const container = document.getElementById("graph-container");
+      container.innerHTML = "";
+      new sigma({
+        graph,
+        container
+      });
+    }
+
+    function populateCategorySelect(nodes) {
+      const select = document.getElementById("category-select");
+      const uniqueCategories = Array.from(new Set(nodes.map(n => n.category).filter(Boolean)));
+
+      // Clear and repopulate select options
+      select.innerHTML = '<option value="all">All</option>';
+      uniqueCategories.forEach(cat => {
+        const option = document.createElement("option");
+        option.value = cat;
+        option.textContent = cat;
+        select.appendChild(option);
+      });
+    }
+
+    function onCategoryChange() {
+      const selected = document.getElementById("category-select").value;
+      if (selected === "all") {
+        renderGraph(fullGraph);
+        return;
+      }
+
+      const filteredNodes = fullGraph.nodes.filter(n =>
+        n.category === selected ||
+        fullGraph.edges.some(e =>
+          (e.source === n.id && fullGraph.nodes.find(nn => nn.id === e.target)?.category === selected) ||
+          (e.target === n.id && fullGraph.nodes.find(nn => nn.id === e.source)?.category === selected)
+        )
+      );
+      const nodeIds = new Set(filteredNodes.map(n => n.id));
+      const filteredEdges = fullGraph.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+      renderGraph({ nodes: filteredNodes, edges: filteredEdges });
+    }
+
+    window.onload = loadGraph;
+  </script>
+</body>
+</html>
