@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ZykovLang MoMA: Semantic Graph Art</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Roboto&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Roboto', sans-serif;
+      background-color: #fafafa;
+    }
+    header {
+      background-color: #111;
+      color: white;
+      padding: 1em;
+      text-align: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 2em;
+    }
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 2em;
+    }
+    .art-card {
+      width: 400px;
+      margin: 1em;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .art-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2em;
+      padding: 0.5em;
+      background: #f4f4f4;
+    }
+    .expression {
+      font-size: 0.85em;
+      color: #555;
+      padding: 0.5em 1em;
+      font-family: monospace;
+    }
+    .graph-view {
+      height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <header>ZykovLang MoMA: Semantic Graph Art Gallery</header>
+  <div class="gallery">
+    <div class="art-card">
+      <div class="art-title">Zykov no es Mokhov</div>
+      <div class="expression">(zykov*(zykov+idea))*(mokhov*(mokhov+ghost)+delay)+no</div>
+      <div id="graph1" class="graph-view"></div>
+    </div>
+    <div class="art-card">
+      <div class="art-title">El teorema de la paciencia infinita</div>
+      <div class="expression">hope*(waiting+compiling+retry)*(email*read+not_read)*(∞+∞+∞)</div>
+      <div id="graph2" class="graph-view"></div>
+    </div>
+  </div>
+
+  <script>
+    const graphs = [
+      {
+        containerId: 'graph1',
+        nodes: ['zykov', 'idea', 'mokhov', 'ghost', 'delay', 'no'],
+        edges: [
+          ['zykov', 'idea'], ['zykov', 'zykov'],
+          ['mokhov', 'ghost'], ['mokhov', 'mokhov'],
+          ['zykov', 'mokhov'], ['zykov', 'ghost'], ['idea', 'mokhov'], ['idea', 'ghost'],
+          ['mokhov', 'delay'], ['ghost', 'delay'],
+          ['zykov', 'no'], ['idea', 'no'], ['mokhov', 'no'], ['ghost', 'no'], ['delay', 'no']
+        ]
+      },
+      {
+        containerId: 'graph2',
+        nodes: ['hope', 'waiting', 'compiling', 'retry', 'email', 'read', 'not_read', '∞'],
+        edges: [
+          ['hope', 'waiting'], ['hope', 'compiling'], ['hope', 'retry'],
+          ['waiting', 'email'], ['compiling', 'email'], ['retry', 'email'],
+          ['email', 'read'], ['email', 'not_read'],
+          ['read', '∞'], ['not_read', '∞'], ['hope', '∞']
+        ]
+      }
+    ];
+
+    graphs.forEach(({ containerId, nodes, edges }) => {
+      const g = {
+        nodes: nodes.map((id, i) => ({ id, label: id, x: Math.cos(i), y: Math.sin(i), size: 10, color: '#4682b4' })),
+        edges: edges.map(([source, target], i) => ({ id: 'e' + i, source, target, color: '#aaa' }))
+      };
+      new sigma({
+        graph: g,
+        container: document.getElementById(containerId),
+        settings: {
+          drawLabels: true,
+          animationsTime: 1000,
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "zykovlib"
+version = "0.1.0"
+description = ""
+authors = ["alfonsobustamante <athal.zigma@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+phiflow = "^2.5.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

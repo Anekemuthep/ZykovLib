@@ -1,0 +1,33 @@
+cabal-version:       >=1.10
+name:                zykov-backend
+version:             0.1.0.0
+synopsis:            ZykovLang symbolic backend
+description:         A small symbolic server for evaluating ZykovLang expressions.
+category:            Web
+author:              Alfonso Bustamante
+maintainer:          you@example.com
+build-type:          Simple
+
+executable zykov-backend
+  main-is:             Main.hs
+  hs-source-dirs:      .
+  default-language:    Haskell2010
+
+  build-depends:
+    base >=4.14 && <5,
+    servant,
+    servant-server,
+    aeson,
+    wai,
+    wai-extra,
+    wai-cors,
+    warp,
+    text,
+    bytestring,
+    containers,
+    process,
+    directory,
+    case-insensitive
+
+
+

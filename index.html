@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ZykovLang Semantic Graph Viewer</title>
+  <!-- Carga correcta de Sigma.js v1 -->
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
+    #controls { padding: 1em; background: #f4f4f4; }
+    #graph-container { flex-grow: 1; height: 100%; }
+    input[type=text] { width: 60%; padding: 0.5em; }
+    button { padding: 0.5em 1em; margin-left: 1em; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <input id="expr" type="text" value="A*(B+C)+D" />
+    <button id="render-btn">Render Graph</button>
+  </div>
+  <div id="graph-container"></div>
+
+  <script>
+    document.getElementById("render-btn").onclick = loadGraph;
+
+    async function loadGraph() {
+      const expression = document.getElementById("expr").value;
+
+      try {
+        const response = await fetch("http://localhost:8080/eval", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expression })
+        });
+
+        const data = await response.json();
+
+        const graph = {
+          nodes: data.nodes.map((id, i) => ({
+            id,
+            label: id,
+            x: Math.cos(i * 2 * Math.PI / data.nodes.length),
+            y: Math.sin(i * 2 * Math.PI / data.nodes.length),
+            size: 1,
+            color: "#4682b4"
+          })),
+          edges: data.edges.map(([source, target], i) => ({
+            id: "e" + i,
+            source,
+            target,
+            color: "#aaa"
+          }))
+        };
+
+        // Limpia contenedor anterior
+        document.getElementById("graph-container").innerHTML = "";
+
+        const s = new sigma({
+          graph: graph,
+          container: 'graph-container'
+        });
+
+      } catch (err) {
+        console.error("Error al cargar o procesar el grafo:", err);
+        alert("No se pudo cargar el grafo. ¿Está corriendo el backend en http://localhost:8080?");
+      }
+    }
+  </script>
+</body>
+</html>

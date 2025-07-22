@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ZykovLang MoMA — Interactive Gallery</title>
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; background: #f9f9f9; }
+    h1 { text-align: center; padding: 1em; }
+    #new-art-form { display: flex; justify-content: center; gap: 0.5em; margin-bottom: 1em; }
+    input, button { padding: 0.5em; font-size: 1em; }
+    #gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1em; padding: 1em; }
+    .artwork { background: white; border: 1px solid #ccc; border-radius: 8px; padding: 1em; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .graph-container { height: 300px; }
+    .title { font-weight: bold; margin-bottom: 0.5em; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>ZykovLang MoMA: Your Personal Graph Gallery</h1>
+  <div id="new-art-form">
+    <input id="title" placeholder="Artwork Title" />
+    <input id="expression" placeholder="Graph Expression (max 20 nodes)" />
+    <button onclick="addArtwork()">Add to Gallery</button>
+  </div>
+  <div id="gallery"></div>
+
+  <script>
+    let collection = [];
+
+    function parseExpression(expr) {
+      const nodes = new Set();
+      const edges = [];
+      const tokens = expr.replace(/\s+/g, '').split(/[^\w]/);
+      tokens.forEach(t => t && nodes.add(t));
+      expr.split('+').forEach(group => {
+        const parts = group.split('*');
+        if (parts.length === 2) edges.push([parts[0], parts[1]]);
+      });
+      return { nodes: [...nodes], edges };
+    }
+
+    function renderGraph(container, graph) {
+      const g = {
+        nodes: graph.nodes.map((id, i) => ({ id, label: id, x: i * 2, y: Math.sin(i), size: 8, color: '#4682b4' })),
+        edges: graph.edges.map(([s, t], i) => ({ id: 'e'+i, source: s, target: t, color: '#aaa' }))
+      };
+      new sigma({ graph: g, container });
+    }
+
+    function addArtwork() {
+      const title = document.getElementById("title").value.trim();
+      const expression = document.getElementById("expression").value.trim();
+      if (!title || !expression || collection.length >= 8) return alert("Add a title, expression, and keep collection under 8.");
+      const graph = parseExpression(expression);
+      if (graph.nodes.length > 20) return alert("Limit to 20 nodes max.");
+      const id = "artwork-" + collection.length;
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "artwork";
+      wrapper.innerHTML = `<div class="title">${title}</div><div class="graph-container" id="${id}"></div>`;
+      document.getElementById("gallery").appendChild(wrapper);
+      renderGraph(document.getElementById(id), graph);
+      collection.push({ title, expression });
+      document.getElementById("title").value = "";
+      document.getElementById("expression").value = "";
+    }
+  </script>
+</body>
+</html>
