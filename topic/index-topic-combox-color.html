@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>ZykovLang Topic Viewer</title>
+  <title>ZykovLang Topic Viewer (Colored Labels)</title>
   <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
   <style>
     body { font-family: sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
@@ -14,7 +14,7 @@
 </head>
 <body>
   <div id="controls">
-    <input id="expr" type="text" value="A::::topic * (B + C) + D" />
+    <input id="expr" type="text" value="Nokias_competitors :::: design_strategy * (Presentation_Apple_iPhone_was_launched + Transparencies + Presentation_Fun_With_The_Camera + Presentation_Design_Insights_from_iPod) + Strategy_and_Nokia_Design :::: design_strategy * Presentation_Apple_iPhone_was_launched + Making_Phones_Fashionable :::: design_strategy * Transparencies + Vision_99 :::: design_strategy * Transparencies +Designing_Technological_Futures :::: design_process * Presentation_Fun_With_The_Camera + Design_and_User_Segmentation :::: design_process * Presentation_Fun_With_The_Camera + Strategy_And_Nokia_Design :::: products * Presentation_Design_Insights_from_iPod + Mobile_Multimedia_Technology :::: products * Presentation_Design_Insights_from_iPod" />
     <button onclick="loadGraph()">Render Graph</button>
     <label for="category-select">Filter by topic:</label>
     <select id="category-select" onchange="onCategoryChange()">
@@ -55,23 +55,87 @@
     }
 
     function buildGraph(nodes, edges) {
-      const categories = Array.from(new Set(nodes.map(n => n.category || "uncategorized")));
+      //const y2kPalette = [
+      //  '#FF00FF', // magenta
+      //  '#00FFFF', // cian
+      //  '#C0C0C0', // plateado
+      //  '#00FF00', // verde neón
+      //  '#FF69B4', // rosa chicle
+      //  '#FFFF00', // amarillo ácido
+      //  '#00BFFF', // azul neón
+      //  '#DDA0DD'  // lila
+      //];
+      const palette9051 = [
+       "#c1d3fe", 
+       "#c2b2fd", 
+       "#fcb1f2", 
+       "#ffd6e0", 
+       "#c3fff4", 
+       "#d3fbd8"
+      ];
+      function darkenColor(hex, factor = 0.7) {
+        const r = Math.floor(parseInt(hex.substr(1, 2), 16) * factor);
+        const g = Math.floor(parseInt(hex.substr(3, 2), 16) * factor);
+        const b = Math.floor(parseInt(hex.substr(5, 2), 16) * factor);
+        return (
+            "#" +
+            r.toString(16).padStart(2, "0") +
+            g.toString(16).padStart(2, "0") +
+            b.toString(16).padStart(2, "0")
+        );
+      }
+
+      //const categories = Array.from(new Set(nodes.map(n => n.category || "uncategorized")));
+      const categories = Array.from(
+        new Set(
+         nodes.map(n => (n.category ? n.category : "entry")) // ← usamos "entry" como valor por defecto
+        )
+      );
+
       const topicColors = {};
       categories.forEach((cat, i) => {
-        topicColors[cat] = hsvToHex((360 / categories.length) * i, 0.5, 0.9);
+        //topicColors[cat] = y2kPalette[i % y2kPalette.length];
+        //topicColors[cat] = (cat === "entry") ? "#8C92AC" : palette9051[i % palette9051.length];
+        topicColors[cat] = (cat === "entry") ? "#8C92AC" : darkenColor(palette9051[i % palette9051.length], 0.7);
+        //topicColors[cat] = hsvToHex((360 / categories.length) * i, 0.5, 0.9);
+        ////// version 2
+        //const hueStart = 180;
+        //const hueEnd = 300;
+        //const hueStep = (hueEnd - hueStart) / categories.length;
+        //topicColors[cat] = hsvToHex(hueStart + hueStep * i, 0.3, 0.95);
+        /// version 3
+        //const y2kPalette = [
+        //  '#FF00FF', // magenta
+        //  '#00FFFF', // cian
+        //  '#C0C0C0', // plateado
+        //  '#00FF00', // verde neón
+        //  '#FF69B4', // rosa chicle
+        //  '#FFFF00', // amarillo ácido
+        //  '#00BFFF', // azul neón
+        //  '#DDA0DD'  // lila
+        //];
+
+        //const topicColors = {};
+        //categories.forEach((cat, i) => {
+        //  topicColors[cat] = y2kPalette[i % y2kPalette.length];
+        //});
       });
 
       return {
-        nodes: nodes.map((n, i) => ({
-          id: n.nodeId,
-          label: n.nodeId,
-          x: Math.cos(i * 2 * Math.PI / nodes.length),
-          y: Math.sin(i * 2 * Math.PI / nodes.length),
-          size: 1.5,
-          color: topicColors[n.category || "uncategorized"],
-          category: n.category || "uncategorized"
-        })),
-        edges: edges.map(([s, t], i) => ({ id: "e" + i, source: s, target: t, color: "#aaa" }))
+        nodes: nodes.map((n, i) => {
+          const color = topicColors[n.category || "uncategorized"];
+          return {
+            id: n.nodeId,
+            label: n.nodeId,
+            x: Math.cos(i * 2 * Math.PI / nodes.length),
+            y: Math.sin(i * 2 * Math.PI / nodes.length),
+            size: n.category ? 5.5 : 1.5,
+            color: n.category ? topicColors[n.category] : '#8b948d',   // gris claro si no tiene categoría
+            labelColor: n.category ? topicColors[n.category] : '#000000', // negro si no tiene categoría
+            category: n.category ? n.category : "entry"
+          };
+        }),
+        edges: edges.map(([s, t], i) => ({ id: "e" + i, source: s, target: t, color: "#ccc" }))
       };
     }
 
@@ -80,13 +144,22 @@
       container.innerHTML = "";
       new sigma({
         graph,
-        container
+        container,
+        settings: {
+          labelThreshold: 0, // Mostrar todas las etiquetas
+          defaultLabelSize: 14,
+          defaultLabelColor: "#000", // Si alguna queda sin color
+          labelColor: "node" // Aquí usamos el color del nodo
+        }
       });
     }
 
     function populateCategorySelect(nodes) {
       const select = document.getElementById("category-select");
-      const uniqueCategories = Array.from(new Set(nodes.map(n => n.category || "uncategorized")));
+      const uniqueCategories = Array.from(new Set(
+        nodes.map(n => n.category).filter(cat => cat && cat !== "entry")
+      ));
+
       select.innerHTML = '<option value="all">All</option>';
       uniqueCategories.forEach(cat => {
         const option = document.createElement("option");
@@ -95,6 +168,7 @@
         select.appendChild(option);
       });
     }
+
 
     function onCategoryChange() {
       const selected = document.getElementById("category-select").value;
