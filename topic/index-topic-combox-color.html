@@ -55,24 +55,24 @@
     }
 
     function buildGraph(nodes, edges) {
-      //const y2kPalette = [
-      //  '#FF00FF', // magenta
-      //  '#00FFFF', // cian
-      //  '#C0C0C0', // plateado
-      //  '#00FF00', // verde neón
-      //  '#FF69B4', // rosa chicle
-      //  '#FFFF00', // amarillo ácido
-      //  '#00BFFF', // azul neón
-      //  '#DDA0DD'  // lila
-      //];
-      const palette9051 = [
-       "#c1d3fe", 
-       "#c2b2fd", 
-       "#fcb1f2", 
-       "#ffd6e0", 
-       "#c3fff4", 
-       "#d3fbd8"
+      const y2kPalette = [
+        '#FF00FF', // magenta
+        '#00FFFF', // cian
+        '#C0C0C0', // plateado
+        '#00FF00', // verde neón
+        '#FF69B4', // rosa chicle
+        '#FFFF00', // amarillo ácido
+        '#00BFFF', // azul neón
+        '#DDA0DD'  // lila
       ];
+      //const palette9051 = [
+      // "#c1d3fe", 
+      // "#c2b2fd", 
+      // "#fcb1f2", 
+      // "#ffd6e0", 
+      // "#c3fff4", 
+      // "#d3fbd8"
+      //];
       function darkenColor(hex, factor = 0.7) {
         const r = Math.floor(parseInt(hex.substr(1, 2), 16) * factor);
         const g = Math.floor(parseInt(hex.substr(3, 2), 16) * factor);
@@ -96,7 +96,8 @@
       categories.forEach((cat, i) => {
         //topicColors[cat] = y2kPalette[i % y2kPalette.length];
         //topicColors[cat] = (cat === "entry") ? "#8C92AC" : palette9051[i % palette9051.length];
-        topicColors[cat] = (cat === "entry") ? "#8C92AC" : darkenColor(palette9051[i % palette9051.length], 0.7);
+        topicColors[cat] = (cat === "entry") ? "#8C92AC" : darkenColor(y2kPalette[i % y2kPalette.length], 0.7);
+        //topicColors[cat] = (cat === "entry") ? "#8C92AC" : darkenColor(palette9051[i % palette9051.length], 0.7);
         //topicColors[cat] = hsvToHex((360 / categories.length) * i, 0.5, 0.9);
         ////// version 2
         //const hueStart = 180;
@@ -130,7 +131,7 @@
             x: Math.cos(i * 2 * Math.PI / nodes.length),
             y: Math.sin(i * 2 * Math.PI / nodes.length),
             size: n.category ? 5.5 : 1.5,
-            color: n.category ? topicColors[n.category] : '#8b948d',   // gris claro si no tiene categoría
+            color: n.category ? topicColors[n.category] : '#343434',   // gris claro si no tiene categoría
             labelColor: n.category ? topicColors[n.category] : '#000000', // negro si no tiene categoría
             category: n.category ? n.category : "entry"
           };
