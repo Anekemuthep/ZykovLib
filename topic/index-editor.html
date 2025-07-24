@@ -69,10 +69,11 @@
 </head>
 <body>
   <div id="left-panel">
-    <h3>Editor de nodo</h3>
+    <h3 id="node-title">Editor de nodo</h3>
     <p><em>Haz clic en un nodo para editar sus datos.</em></p>
     <div id="node-editor"></div>
   </div>
+
 
   <div id="graph-area">
     <div id="controls">
@@ -193,6 +194,8 @@
     }
 
     function showNodeEditor(nodeId) {
+      //const editor = document.getElementById("node-editor");
+      document.getElementById("node-title").textContent = "Editor de nodo " + nodeId;
       const editor = document.getElementById("node-editor");
       const data = entryData[nodeId] || { title: "", text: "", image: "" };
 
