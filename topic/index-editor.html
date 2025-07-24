@@ -48,6 +48,34 @@
       flex-grow: 1;
     }
 
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: white;
+      min-width: 160px;
+      box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+      z-index: 1;
+    }
+
+    .dropdown-content button {
+      width: 100%;
+      padding: 8px 12px;
+      text-align: left;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+
     input[type="text"], textarea {
       width: 100%;
       margin-top: 5px;
@@ -74,20 +102,21 @@
     <div id="node-editor"></div>
   </div>
 
-
   <div id="graph-area">
     <div id="controls">
       <input id="expr" type="text" value="A :::: theme * (B + C) + D :::: topic * (viva + laVida + loca + B) + B*oreo*res" />
       <button onclick="loadGraph()">Render Graph</button>
-      <label for="category-select">Filtrar por tópico:</label>
-      <select id="category-select" onchange="onCategoryChange()">
-        <option value="all">Todos</option>
-      </select>
+
+      <div class="dropdown">
+        <button id="dropdown-btn">Filtrar por tópico: Todos</button>
+        <div id="dropdown-menu" class="dropdown-content"></div>
+      </div>
     </div>
     <div id="graph-container"></div>
   </div>
 
   <script>
+    let topicColorMap = {}; // ← Guarda los colores consistentes por categoría
     let fullGraph = { nodes: [], edges: [] };
     let entryData = JSON.parse(localStorage.getItem("entryData")) || {};
 
@@ -102,8 +131,9 @@
 
         const data = await response.json();
         fullGraph = buildGraph(data.nodes, data.edges);
-        populateCategorySelect(data.nodes);
+        populateCategoryDropdown(data.nodes);
         renderGraph(fullGraph);
+        onCategoryChange("all");
       } catch (err) {
         alert("Error al cargar el grafo. Revisa la consola.");
         console.error(err);
@@ -117,6 +147,8 @@
       categories.forEach((cat, i) => {
         topicColors[cat] = (cat === "entry") ? "#8C92AC" : darkenColor(palette[i % palette.length], 0.7);
       });
+
+      topicColorMap = topicColors; // Actualiza el mapa global de colores
 
       return {
         nodes: nodes.map((n, i) => {
@@ -146,12 +178,12 @@
          graph,
          container,
          settings: {
-            labelThreshold: 0, // Muestra todas las etiquetas
+            labelThreshold: 0,
             defaultLabelSize: 14,
             defaultLabelColor: "#000",
-            labelColor: "node" // Usa el campo `labelColor` de cada nodo
+            labelColor: "node"
          }
-    });
+      });
 
       s.bind("clickNode", function(e) {
         const nodeId = e.data.node.id;
@@ -159,33 +191,51 @@
       });
     }
 
-    function populateCategorySelect(nodes) {
-      const select = document.getElementById("category-select");
-      const uniqueCategories = Array.from(new Set(
-        nodes.map(n => n.category).filter(cat => cat && cat !== "entry")
-      ));
+    function populateCategoryDropdown(nodes) {
+      const menu = document.getElementById("dropdown-menu");
+      const categories = Array.from(new Set(nodes.map(n => n.category || "entry")));
+      const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+      menu.innerHTML = "";
 
-      select.innerHTML = '<option value="all">Todos</option>';
-      uniqueCategories.forEach(cat => {
-        const option = document.createElement("option");
-        option.value = cat;
-        option.textContent = cat;
-        select.appendChild(option);
+      const allButton = document.createElement("button");
+      allButton.textContent = "Todos";
+      allButton.style.backgroundColor = "#8C92AC";
+      allButton.style.color = isDarkColor("#8C92AC") ? "#fff" : "#000";
+      allButton.onclick = () => onCategoryChange("all");
+      menu.appendChild(allButton);
+
+      categories.filter(cat => cat !== "entry").forEach((cat) => {
+        const color = topicColorMap[cat] || "#ccc";
+        const textColor = isDarkColor(color) ? "#fff" : "#000";
+        const button = document.createElement("button");
+        button.textContent = cat;
+        button.style.backgroundColor = color;
+        button.style.color = textColor;
+        button.onclick = () => onCategoryChange(cat);
+        menu.appendChild(button);
       });
     }
 
-    function onCategoryChange() {
-      const selected = document.getElementById("category-select").value;
-      if (selected === "all") {
+    function onCategoryChange(category) {
+      const dropdownBtn = document.getElementById("dropdown-btn");
+      const categories = Array.from(new Set(fullGraph.nodes.map(n => n.category || "entry")));
+      const color = getCategoryColor(category === "all" ? "entry" : category, categories);
+      const textColor = isDarkColor(color) ? "#fff" : "#000";
+
+      dropdownBtn.textContent = "Filtrar por tópico: " + (category === "all" ? "Todos" : category);
+      dropdownBtn.style.backgroundColor = color;
+      dropdownBtn.style.color = textColor;
+
+      if (category === "all") {
         renderGraph(fullGraph);
         return;
       }
 
       const filteredNodes = fullGraph.nodes.filter(n =>
-        n.category === selected ||
+        n.category === category ||
         fullGraph.edges.some(e =>
-          (e.source === n.id && fullGraph.nodes.find(nn => nn.id === e.target)?.category === selected) ||
-          (e.target === n.id && fullGraph.nodes.find(nn => nn.id === e.source)?.category === selected)
+          (e.source === n.id && fullGraph.nodes.find(nn => nn.id === e.target)?.category === category) ||
+          (e.target === n.id && fullGraph.nodes.find(nn => nn.id === e.source)?.category === category)
         )
       );
       const nodeIds = new Set(filteredNodes.map(n => n.id));
@@ -193,8 +243,21 @@
       renderGraph({ nodes: filteredNodes, edges: filteredEdges });
     }
 
+    function getCategoryColor(cat, categories) {
+      const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+      const index = categories.indexOf(cat);
+      return (cat === "entry") ? "#8C92AC" : darkenColor(palette[index % palette.length], 0.7);
+    }
+
+    function isDarkColor(hex) {
+      const r = parseInt(hex.substr(1, 2), 16);
+      const g = parseInt(hex.substr(3, 2), 16);
+      const b = parseInt(hex.substr(5, 2), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      return brightness < 128;
+    }
+
     function showNodeEditor(nodeId) {
-      //const editor = document.getElementById("node-editor");
       document.getElementById("node-title").textContent = "Editor de nodo " + nodeId;
       const editor = document.getElementById("node-editor");
       const data = entryData[nodeId] || { title: "", text: "", image: "" };
