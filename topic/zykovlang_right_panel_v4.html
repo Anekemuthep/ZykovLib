@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ZykovLang Semantic Editor Beta</title>
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+    .main-container { display: flex; flex-direction: row; width: 100%; height: 100vh; }
+    #graph-area { flex-grow: 1; display: flex; flex-direction: column; height: 100%; }
+    #controls {
+      padding: 0.4em 0.6em 0 0.6em;
+      background: #eaeaea;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #ccc;
+    }
+    #expr-container {
+      display: flex;
+      align-items: center;
+      gap: 0.6em;
+      padding-top: 2px;
+    }
+    #expr {
+      padding: 0.5em;
+      width: 350px;
+      font-size: 16px;
+      position: relative;
+      top: 2px;
+    }
+    #controls button, #controls select {
+      padding: 0.5em 1em;
+      font-size: 14px;
+      position: relative;
+      top: 2px;
+    }
+    #graph-container {
+      flex-grow: 1;
+      height: 100%;
+      padding: 0 0 30px 40px; /* ← Agrega 40px a la izquierda */
+      box-sizing: border-box;
+    }
+    #right-panel {
+      width: 30vw;
+      height: 100%;
+      background: #f4f4f4;
+      border-left: 1px solid #ccc;
+      padding: 1em;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    input[type="text"], textarea {
+      margin-top: 5px;
+      margin-bottom: 15px;
+      padding: 5px;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .mode-toggle {
+      position: absolute;
+      top: 100px;
+      left: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mode-toggle button {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      background-color: #ddd;
+      border: 1px solid #aaa;
+      padding: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .navigator-section {
+      padding: 1em;
+    }
+    .navigator-node {
+      margin-bottom: 1.5em;
+    }
+    .navigator-node h4 {
+      margin-bottom: 0.2em;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    .save-btn {
+      padding: 8px 12px;
+      font-size: 14px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="mode-toggle">
+    <button onclick="setMode('editor')">Editor</button>
+    <button onclick="setMode('navigator')">Navegador</button>
+  </div>
+  <div class="main-container">
+    <div id="graph-area">
+      <div id="controls">
+        <div id="expr-container">
+          <input id="expr" type="text" value="A :::: theme * (B + C) + D :::: topic * (viva + laVida + loca + B) + B*oreo*res" />
+          <button onclick="loadGraph()">Render Graph</button>
+        </div>
+      </div>
+      <div id="graph-container"></div>
+    </div>
+    <div id="right-panel">
+      <div id="editor-view">
+        <h3 id="node-title">Editor de nodo</h3>
+        <p><em>Haz clic en un nodo para editar sus datos.</em></p>
+        <div id="node-editor"></div>
+      </div>
+      <div id="navigator-view" style="display: none;">
+        <div class="navigator-section">
+          <h2>Zigrafi, tu navegador semántico</h2>
+          <div id="navigator-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+  let currentMode = 'editor';
+  let graphData = { nodes: [], edges: [] };
+  let entryData = JSON.parse(localStorage.getItem("entryData")) || {};
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('editor-view').style.display = mode === 'editor' ? 'block' : 'none';
+    document.getElementById('navigator-view').style.display = mode === 'navigator' ? 'block' : 'none';
+
+    // Actualizar contenido si es modo navegador
+    if (mode === 'navigator') updateNavigatorView();
+  }
+
+  function loadGraph() {
+    const expression = document.getElementById("expr").value;
+    fetch("http://localhost:8080/eval", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expression })
+    })
+    .then(response => response.json())
+    .then(data => {
+      graphData = data;
+      renderGraph();
+      if (currentMode === 'navigator') updateNavigatorView();
+      populateTopicFilter(); // Nueva función para evitar duplicar código
+    });
+  }
+
+  function renderGraph() {
+    const container = document.getElementById("graph-container");
+    container.innerHTML = "";
+    const s = new sigma({
+      graph: {
+        nodes: graphData.nodes.map((n, i) => ({
+          id: n.nodeId,
+          label: entryData[n.nodeId]?.title || n.nodeId,
+          x: Math.cos(i * 2 * Math.PI / graphData.nodes.length),
+          y: Math.sin(i * 2 * Math.PI / graphData.nodes.length),
+          size: 1.5,
+          color: n.category === "entry" || !n.category ? "#666" : getCategoryColor(n.category)
+        })),
+        edges: graphData.edges.map(([s, t], i) => ({ id: 'e' + i, source: s, target: t, color: '#ccc' }))
+      },
+      container
+    });
+
+    s.bind("clickNode", function(e) {
+      if (currentMode !== 'editor') return;
+
+      const nodeId = e.data.node.id;
+      const data = entryData[nodeId] || { title: "", text: "", image: "" };
+      document.getElementById("node-editor").innerHTML = `
+        <label>Título:</label>
+        <input type="text" id="titleInput" value="${data.title}" />
+        <label>Texto:</label>
+        <textarea id="textInput" rows="6">${data.text}</textarea>
+        <label>Ruta de imagen:</label>
+        <input type="text" id="imageInput" value="${data.image}" />
+        <button class="save-btn" onclick="saveNodeData('${nodeId}')">Guardar</button>
+        <div style="margin-top:10px;">
+          <strong>Preview:</strong><br>
+          <img src="${data.image}" style="width:100%; max-height:300px; object-fit:contain; margin-top:5px;">
+        </div>
+      `;
+    });
+  }
+
+  function saveNodeData(nodeId) {
+    const title = document.getElementById("titleInput").value;
+    const text = document.getElementById("textInput").value;
+    const image = document.getElementById("imageInput").value;
+    entryData[nodeId] = { title, text, image };
+    localStorage.setItem("entryData", JSON.stringify(entryData));
+    alert("Datos guardados para " + nodeId);
+  }
+
+  function populateTopicFilter() {
+    const topicFilter = document.getElementById("topicFilter");
+    topicFilter.innerHTML = '<option value="all">Todos</option>';
+
+    const topicNodes = graphData.nodes.filter(n => n.category === "topic");
+    topicNodes.forEach(t => {
+      const option = document.createElement("option");
+      option.value = t.nodeId;
+      option.text = entryData[t.nodeId]?.title || t.nodeId;
+      topicFilter.appendChild(option);
+    });
+  }
+
+  function updateNavigatorView() {
+    const topicFilter = document.getElementById("topicFilter");
+    const container = document.getElementById("navigator-content");
+    container.innerHTML = "";
+
+    const selected = topicFilter.value;
+    let visibleNodeIds = [];
+
+    if (selected === "all") {
+      visibleNodeIds = graphData.nodes.filter(n => n.category !== "topic").map(n => n.nodeId);
+    } else {
+      visibleNodeIds = graphData.edges
+        .filter(([s, t]) => s === selected)
+        .map(([s, t]) => t);
+    }
+
+    visibleNodeIds.forEach(id => {
+      const data = entryData[id] || {};
+      const nodeDiv = document.createElement("div");
+      nodeDiv.className = "navigator-node";
+      nodeDiv.innerHTML = `
+        <h4>${data.title || id}</h4>
+        <p>${data.text || "Sin descripción."}</p>
+      `;
+      container.appendChild(nodeDiv);
+    });
+  }
+
+  function getCategoryColor(cat) {
+    const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+    const hash = cat.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return palette[hash % palette.length];
+  }
+
+  window.onload = loadGraph;
+</script>
+</body>
+</html>

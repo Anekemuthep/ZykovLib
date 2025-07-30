@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ZykovLang Semantic Editor Beta</title>
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+    .main-container {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      height: 100vh;
+    }
+    #graph-area {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    #controls {
+      padding: 0.4em 0.6em 0 0.6em;
+      background: #eaeaea;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #ccc;
+    }
+    #expr-container {
+      display: flex;
+      align-items: center;
+      gap: 0.6em;
+      padding-top: 2px;
+    }
+    #expr {
+      padding: 0.5em;
+      width: 350px;
+      font-size: 16px;
+      position: relative;
+      top: 2px;
+    }
+    #controls button, #controls select {
+      padding: 0.5em 1em;
+      font-size: 14px;
+      position: relative;
+      top: 2px;
+    }
+    #graph-container {
+      flex-grow: 1;
+      height: 100%;
+      padding: 0 0 30px 40px; /* ← Agrega 40px a la izquierda */
+      box-sizing: border-box;
+    }
+    #right-panel {
+      width: 30vw;
+      height: 100%;
+      background: #f4f4f4;
+      border-left: 1px solid #ccc;
+      padding: 1em;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    .dropdown {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: white;
+      min-width: 160px;
+      box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+      z-index: 1;
+    }
+    .dropdown-content button {
+      width: 100%;
+      padding: 8px 12px;
+      text-align: left;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+    input[type="text"], textarea {
+      margin-top: 5px;
+      margin-bottom: 15px;
+      padding: 5px;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button.save-btn {
+      padding: 8px 12px;
+      font-size: 14px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    #navigator-view {
+      display: none;
+    }
+    .mode-toggle {
+      position: absolute;
+      top: 100px;
+      left: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mode-toggle button {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      background-color: #ddd;
+      border: 1px solid #aaa;
+      padding: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .navigator-section {
+      padding: 1em;
+    }
+    #navigator-topic-line {
+      display: none;
+    }
+    #nav-btn.active,
+    #edit-btn.active {
+      background-color: black;
+      color: white;
+      font-weight: bold;
+      border: 2px solid black;
+    }
+
+    #nav-btn,
+    #edit-btn {
+      background-color: white;
+      color: black;
+      border: 2px solid black;
+      padding: 4px 10px;
+      margin-bottom: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="mode-toggle">
+    <button id="nav-btn" onclick="setMode('editor')">Editor</button>
+    <button id="edit-btn"  onclick="setMode('navigator')">Navegador</button>
+  </div>
+  <div class="main-container">
+    <div id="graph-area">
+      <div id="controls">
+        <div id="expr-container">
+          <input id="expr" type="text" value="A :::: theme * (B + C) + D :::: topic * (viva + laVida + loca + B) + B*oreo*res" />
+          <button onclick="loadGraph()">Render Graph</button>
+          <label for="dropdown-btn" style="margin-left: 0.5em; font-weight: bold; position: relative; top: 2px;">Filtrar por tópico:</label>
+          <div class="dropdown">
+            <button id="dropdown-btn">Todos</button>
+            <div id="dropdown-menu" class="dropdown-content"></div>
+          </div>
+        </div>
+      </div>
+      <div id="graph-container"></div>
+    </div>
+    <div id="right-panel">
+      <div id="editor-view">
+        <h3 id="node-title">Editor de nodo</h3>
+        <p><em>Haz clic en un nodo para editar sus datos.</em></p>
+        <div id="node-editor"></div>
+        <hr />
+        <h3 id="topic-title">Editor de tópico</h3>
+        <p id="current-topic-name" style="font-weight: bold; color: #333; margin-top: -10px; margin-bottom: 10px;"></p>
+        <div id="topic-editor">
+          <input id="topic-name" type="text" placeholder="Título del tópico">
+          <textarea id="topic-description" placeholder="Descripción del tópico..."></textarea>
+          <button class="save-btn" onclick="saveTopicInfo()">Guardar Tópico</button>
+        </div>
+        <hr />
+        <h3>Editor general</h3>
+        <p style="font-weight: bold; color: #333; margin-top: -10px; margin-bottom: 10px;">Información general de la red</p>
+        <div id="all-editor">
+          <input id="all-title" type="text" placeholder="Título general de la red">
+          <textarea id="all-description" placeholder="Descripción general del grafo..."></textarea>
+          <button class="save-btn" onclick="saveAllInfo()">Guardar Información General</button>
+        </div>
+      </div>
+      <div id="navigator-view" style="display: none;">
+        <div class="navigator-section">
+          <h2 id="navigator-title">Zigrafi, tu editor semántico</h2>
+          <p id="navigator-topic-line"><strong>Tópico:</strong> <span id="navigator-topic-name">Todos</span></p>
+          <h4 id="navigator-topic-title"></h4>
+          <p id="navigator-topic-description"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let topicColorMap = {};
+    let fullGraph = { nodes: [], edges: [] };
+    let entryData = JSON.parse(localStorage.getItem("entryData")) || {};
+    let currentMode = 'editor';
+
+    async function loadGraph() {
+      const expression = document.getElementById("expr").value;
+      try {
+        const response = await fetch("http://localhost:8080/eval", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expression })
+        });
+
+        const data = await response.json();
+        fullGraph = buildGraph(data.nodes, data.edges);
+        populateCategoryDropdown(data.nodes);
+        renderGraph(fullGraph);
+        onCategoryChange("all");
+      } catch (err) {
+        alert("Error al cargar el grafo. Revisa la consola.");
+        console.error(err);
+      }
+
+    }
+
+    function buildGraph(nodes, edges) {
+      const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+      const categories = Array.from(new Set(nodes.map(n => n.category || "entry")));
+      const topicColors = {};
+      categories.forEach((cat, i) => {
+        topicColors[cat] = (cat === "entry") ? "#8C92AC" : darkenColor(palette[i % palette.length], 0.7);
+      });
+
+      topicColorMap = topicColors;
+
+      return {
+        nodes: nodes.map((n, i) => {
+          const isEntry = (n.category || "entry") === "entry";
+          const color = isEntry ? "#343434" : topicColors[n.category];
+          const labelColor = isEntry ? "#343434" : topicColors[n.category];
+          const radiusFactor = Math.min(3, Math.log(nodes.length + 5));
+          return {
+            id: n.nodeId,
+            label: entryData[n.nodeId]?.title || n.nodeId,
+            x: Math.cos(i * 2 * Math.PI / nodes.length) * radiusFactor,
+            y: Math.sin(i * 2 * Math.PI / nodes.length) * radiusFactor,
+            size: isEntry ? 1.5 : 5.5,
+            color,
+            labelColor,
+            category: n.category || "entry",
+            font: isEntry ? "Inconsolata" : "Orbitron",
+            labelSize: isEntry ? 10 : 14
+          };
+        }),
+        edges: edges.map(([s, t], i) => ({ id: "e" + i, source: s, target: t, color: "#ccc" }))
+      };
+    }
+
+    function renderGraph(graph) {
+      const container = document.getElementById("graph-container");
+      container.innerHTML = "";
+      const s = new sigma({
+        graph,
+        container
+      });
+
+      // Zoom out un poco más para que los nodos no queden al borde
+      s.camera.goTo({
+         x: 0,
+         y: 0,
+        ratio: 1.1 // Puedes subirlo a 2 o bajarlo según qué tan lejos quieras el zoom
+      });
+
+
+      s.settings({
+        labelSize: 'fixed',
+        defaultLabelSize: 14,
+        defaultLabelColor: "#000",
+        labelColor: "node",
+        defaultLabelFont: "sans-serif"
+      });
+
+      sigma.canvas.labels.def = function(node, context, settings) {
+        const prefix = settings('prefix') || '';
+        const size = node.labelSize || settings('defaultLabelSize');
+        const font = node.font || settings('defaultLabelFont');
+
+        context.font = size + "px " + font;
+        context.fillStyle = node.labelColor || settings('defaultLabelColor');
+        context.textAlign = 'center';
+        context.fillText(node.label, node[prefix + 'x'], node[prefix + 'y'] + size + 2);
+      };
+
+      s.bind("clickNode", function(e) {
+        const nodeId = e.data.node.id;
+        if (currentMode === 'editor') {
+          showNodeEditor(nodeId);
+        } else if (currentMode === 'navigator') {
+          showNavigatorNodeInfo(nodeId);
+        }
+      });
+
+    }
+
+    function populateCategoryDropdown(nodes) {
+      const menu = document.getElementById("dropdown-menu");
+      const categories = Array.from(new Set(nodes.map(n => n.category || "entry")));
+      menu.innerHTML = "";
+
+      const allButton = document.createElement("button");
+      allButton.textContent = "Todos";
+      allButton.style.backgroundColor = "#8C92AC";
+      allButton.style.color = isDarkColor("#8C92AC") ? "#fff" : "#000";
+      allButton.onclick = () => onCategoryChange("all");
+      menu.appendChild(allButton);
+
+      categories.filter(cat => cat !== "entry").forEach((cat) => {
+        const color = topicColorMap[cat] || "#ccc";
+        const textColor = isDarkColor(color) ? "#fff" : "#000";
+        const button = document.createElement("button");
+        button.textContent = cat;
+        button.style.backgroundColor = color;
+        button.style.color = textColor;
+        button.onclick = () => onCategoryChange(cat);
+        menu.appendChild(button);
+      });
+    }
+
+    function onCategoryChange(category) {
+        const dropdownBtn = document.getElementById("dropdown-btn");
+        const categories = Array.from(new Set(fullGraph.nodes.map(n => n.category || "entry")));
+        const color = getCategoryColor(category === "all" ? "entry" : category, categories);
+        const textColor = isDarkColor(color) ? "#fff" : "#000";
+
+        dropdownBtn.textContent = (category === "all" ? "Todos" : category);
+        dropdownBtn.style.backgroundColor = color;
+        dropdownBtn.style.color = textColor;
+
+        if (category === "all") {
+        renderGraph(fullGraph);
+        } else {
+        const filteredNodes = fullGraph.nodes.filter(n =>
+            n.category === category ||
+            fullGraph.edges.some(e =>
+            (e.source === n.id && fullGraph.nodes.find(nn => nn.id === e.target)?.category === category) ||
+            (e.target === n.id && fullGraph.nodes.find(nn => nn.id === e.source)?.category === category)
+            )
+        );
+        const nodeIds = new Set(filteredNodes.map(n => n.id));
+        const filteredEdges = fullGraph.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+        renderGraph({ nodes: filteredNodes, edges: filteredEdges });
+        }
+
+        // 🔹 Corrección clave: actualizar panel si está en modo navegador
+        if (currentMode === "navigator") {
+        loadNavigatorView();
+        }
+    }
+
+    function getCategoryColor(cat, categories) {
+      const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+      const index = categories.indexOf(cat);
+      return (cat === "entry") ? "#8C92AC" : darkenColor(palette[index % palette.length], 0.7);
+    }
+
+    function isDarkColor(hex) {
+      const r = parseInt(hex.substr(1, 2), 16);
+      const g = parseInt(hex.substr(3, 2), 16);
+      const b = parseInt(hex.substr(5, 2), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      return brightness < 128;
+    }
+
+    function showNodeEditor(nodeId) {
+      document.getElementById("node-title").textContent = "Editor de nodo " + nodeId;
+      const editor = document.getElementById("node-editor");
+      const data = entryData[nodeId] || { title: "", text: "", image: "" };
+
+      editor.innerHTML = `
+        <label>Título:</label>
+        <input type="text" id="titleInput" value="${data.title}" />
+        <label>Texto:</label>
+        <textarea id="textInput" rows="6">${data.text}</textarea>
+        <label>Ruta de imagen:</label>
+        <input type="text" id="imageInput" value="${data.image}" />
+        <button class="save-btn" onclick="saveNodeData('${nodeId}')">Guardar</button>
+        <div style="margin-top:10px;">
+          <strong>Preview:</strong><br>
+          <img src="${data.image}" style="width:100%; max-height:300px; object-fit:contain; margin-top:5px;">
+        </div>
+      `;
+    }
+
+    function saveNodeData(nodeId) {
+      const title = document.getElementById("titleInput").value;
+      const text = document.getElementById("textInput").value;
+      const image = document.getElementById("imageInput").value;
+
+      entryData[nodeId] = { title, text, image };
+      localStorage.setItem("entryData", JSON.stringify(entryData));
+      alert("Datos guardados para " + nodeId);
+    }
+
+    function darkenColor(hex, factor = 0.7) {
+      const r = Math.floor(parseInt(hex.substr(1, 2), 16) * factor);
+      const g = Math.floor(parseInt(hex.substr(3, 2), 16) * factor);
+      const b = Math.floor(parseInt(hex.substr(5, 2), 16) * factor);
+      return (
+        "#" +
+        r.toString(16).padStart(2, "0") +
+        g.toString(16).padStart(2, "0") +
+        b.toString(16).padStart(2, "0")
+      );
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      const editor = document.getElementById('editor-view');
+      const navigator = document.getElementById('navigator-view');
+      const navBtn = document.getElementById('nav-btn');
+      const editBtn = document.getElementById('edit-btn');
+
+      if (mode === 'navigator') {
+        editor.style.display = 'none';
+        navigator.style.display = 'block';
+        navBtn.classList.add("active");
+        editBtn.classList.remove("active");
+        loadNavigatorView();
+      } else {
+        editor.style.display = 'block';
+        navigator.style.display = 'none';
+        editBtn.classList.add("active");
+        navBtn.classList.remove("active");
+      }
+    }
+
+
+    function loadNavigatorView() {
+      const dropdown = document.getElementById('dropdown-btn');
+      const selected = dropdown?.textContent?.trim() || "Todos";
+      const key = (selected === "Todos") ? "__All" : selected;
+      const entryTopic = JSON.parse(localStorage.getItem("entryTopic") || "{}");
+      const data = entryTopic[key] || { title: "", description: "" };
+
+      document.getElementById("navigator-title").textContent = data.title || "Zigrafi, tu editor semántico";
+      //document.getElementById("navigator-topic-name").textContent = selected;
+      const titleEl = document.getElementById("navigator-title");
+      titleEl.textContent = data.title || "Zigrafi, tu editor semántico";
+
+      if (!selected.startsWith("Nodo: ")) {
+        const color = topicColorMap[selected === "Todos" ? "entry" : selected] || "#ccc";
+        const textColor = isDarkColor(color) ? "#fff" : "#000";
+        titleEl.style.backgroundColor = color;
+        titleEl.style.color = textColor;
+        titleEl.style.padding = "6px 10px";
+        titleEl.style.borderRadius = "6px";
+        titleEl.style.display = "inline-block";
+      } else {
+    // Si es nodo, vuelve a estilo limpio
+        titleEl.style.backgroundColor = "";
+        titleEl.style.color = "";
+        titleEl.style.padding = "";
+        titleEl.style.borderRadius = "";
+        titleEl.style.display = "";
+      }
+    document.getElementById("navigator-topic-title").textContent = "";
+    document.getElementById("navigator-topic-description").innerHTML = `
+    <p>${data.description || "(sin descripción)"}</p>
+    `;   
+    }
+
+    window.onload = () => {
+      const dropdownBtn = document.getElementById("dropdown-btn");
+      if (!dropdownBtn.textContent.trim()) {
+        dropdownBtn.textContent = "Todos";
+      }
+      loadGraph?.();
+      updateCurrentTopicLabel?.();
+      document.getElementById('editor-view').style.display = 'block';
+      document.getElementById('navigator-view').style.display = 'none';
+    };
+    
+    function showNavigatorNodeInfo(nodeId) {
+      const data = entryData[nodeId] || { title: "", text: "", image: "" };
+      document.getElementById("navigator-title").textContent = data.title || nodeId;
+      document.getElementById("navigator-topic-name").textContent = "Nodo: " + nodeId;
+      document.getElementById("navigator-topic-title").textContent = "";
+      document.getElementById("navigator-topic-description").innerHTML = `
+        <p>${data.text || "(sin descripción)"}</p>
+        ${data.image ? `<img src="${data.image}" style="max-width:100%; max-height:300px; margin-top:10px;">` : ""}
+      `;
+    }
+
+  </script>
+</body>
+</html>
