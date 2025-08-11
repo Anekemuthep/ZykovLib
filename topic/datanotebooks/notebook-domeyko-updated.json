@@ -1,0 +1,92 @@
+{
+  "name": "",
+  "expression": "new_products :::: all_products * (car\n+ boat\n+ dishwasher\n+ vacumcleaner\n+ robot\n+ droid)\n+ driving_products :::: vehicles * (car\n+ boat\n+ plain)\n+ robot_products :::: robots * (robot\n+ droid)\n+ droid * talkMachine\n+ house_machines :::: house * (dishwasher\n+ vacumcleaner)",
+  "nodes": {
+    "boat": {
+      "title": "Boat",
+      "text": "Do you want to be the Colombus of the XXI century without even care on a crew? Sale like a chinese XVI emperor and salve your self a great trip for yourself with Colombus Boat 2000! A small cruise with wi-fi and automated food suply via drones and autopilot for your discovery travels be a vacation and not a task!",
+      "image": "undefined"
+    },
+    "car": {
+      "title": "Time Travel Car",
+      "text": "I know what youre thinking: another automated car.. gosh! ive seen it with Tela! what else we can possible offer to make it better... well, there is one more thing: this car can travell to time thankes to a flux capacitator integrated courtesy of our association with Brown Industires, so your time travel is nos smart!",
+      "image": "undefined"
+    },
+    "dishwasher": {
+      "title": "Dish Washer",
+      "text": "The party is over, everything is a mess and the dishes... ho boy, the dishes! no mercy! but here is you saviour: The Wander Dish 2000! Clean the dishes on a complete army in just 20 minutes!\n\nBuy it now and waste no more time!",
+      "image": "undefined"
+    },
+    "driving_products": {
+      "title": "Driving Products",
+      "text": "Want to travel but be fashonable and secure like James Bond meet Night Rider not only in asphault but in air and sea? \n\nThis line of autopilot vehiles has what it takes for you to be a super agent with nothing to envy to Tesla.",
+      "image": "undefined"
+    },
+    "droid": {
+      "title": "Droid",
+      "text": "Do you want a companion of your routine to be an asistant and even you personal guard? \n\nYou are in the right place boy! because here Droid 2000 Ultra it was just made for you!",
+      "image": "undefined"
+    },
+    "house_machines": {
+      "title": "House Machines",
+      "text": "Need machines for your day-to-day life? say no more and look our fantastic line of house machines!",
+      "image": "undefined"
+    },
+    "new_products": {
+      "title": "New Products",
+      "text": "Here he present our brand new products of this seson. He hope to impress you totally!",
+      "image": "undefined"
+    },
+    "plain": {
+      "title": "Plane",
+      "text": "Do you need to fly from A to B? say no more! and buy our finest plane Redbird 2000! faster that the Blackbird and with totally automated pilot!",
+      "image": "undefined"
+    },
+    "robot": {
+      "title": "Domo Arigato Robot",
+      "text": "Did you dreamed to have a Robot in your life? No! you are not dreaming now! you can have it right a store away with the Domo Arigato Roboto 2000, your robot friend!",
+      "image": "undefined"
+    },
+    "robot_products": {
+      "title": "Robot Products",
+      "text": "Be amazed on our great robots to offer: from talking beings to helping in your day-to-day routine!",
+      "image": "undefined"
+    },
+    "talkMachine": {
+      "title": "The amazing talking machine",
+      "text": "The amazing talking machine 2000 is the mos amazing talking machine you have ever seen! \n\nit can help you with love problems and tell you jokes! whan a wanderful device! \n\nbuy it now!",
+      "image": "undefined"
+    },
+    "vacumcleaner": {
+      "title": "Vacum Cleaner",
+      "text": "The floor of the house is dirty, you have 15 minutes before guests came. No, you are not doomed with Vacum Black Hole 2000! the vacum cleaner that cleans the floor like a black hole asipiring everithing to ints singularity!",
+      "image": "undefined"
+    }
+  },
+  "topics": {
+    "all_products": {
+      "title": "Domeyko Electrodomestics",
+      "description": "In Domeyko Electrodomestics, we belive in innovation in the Jetsons way: make your like comfortable and fashonable. What else you can ask?\n\nPlease take a look on our main lines."
+    },
+    "house": {
+      "title": "Home",
+      "description": "Do you want to have the house of the future now? \n\nExplore our unique products that will turn your house into the House Of Tomorrow ready for a Tomorrow Land Fair!"
+    },
+    "robots": {
+      "title": "Robots",
+      "description": "Robots.. synonim of future, a symbol of what our workd can be automated to perfection for a better life.\n\nExplore the Robot Line in Domenyko, and be yourself suprised on the way to make you life automated for good."
+    },
+    "vehicles": {
+      "title": "Vehicles",
+      "description": "You want to travel safe and fast? \n\nSay no more and explore our line of vehicles at Domeyko!"
+    },
+    "__All": {
+      "title": "Electrodomesticos Domeyko: Eletrodomestics for the Jetsons now!",
+      "description": "In Domeyko Eletrodomestics, we belive that an electrodmestics is the hose and beyond the houe: is the exptension of you in your life as your house, from your work, the places you go and the house.\n\n\nTake a look on the lines we have to ofer to make your life, your house, the house of the future now."
+    }
+  },
+  "all": {
+    "title": "Electrodomesticos Domeyko: Eletrodomestics for the Jetsons now!",
+    "description": "In Domeyko Eletrodomestics, we belive that an electrodmestics is the hose and beyond the houe: is the exptension of you in your life as your house, from your work, the places you go and the house.\n\n\nTake a look on the lines we have to ofer to make your life, your house, the house of the future now."
+  }
+}

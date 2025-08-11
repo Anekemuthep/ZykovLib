@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Zigrafi - Prototipo de dataNotebook (con parser)</title>
+  <style>
+    body { font-family: sans-serif; display: flex; gap: 20px; margin: 20px; }
+    textarea, input { width: 100%; margin-top: 5px; font-size: 14px; }
+    .column { flex: 1; min-width: 300px; }
+    .section { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="column">
+    <div class="section">
+      <h3>Expresión del grafo</h3>
+      <textarea id="expr" rows="3"></textarea>
+      <button onclick="renderGraph()">Renderizar grafo</button>
+    </div>
+
+    <div class="section">
+      <h3>Editor de nodo</h3>
+      <select id="node-selector" onchange="selectNode(this.value)"></select>
+      <input id="node-title" placeholder="Título del nodo">
+      <textarea id="node-text" placeholder="Texto del nodo"></textarea>
+      <button onclick="saveNodeInfo()">Guardar nodo</button>
+    </div>
+
+    <div class="section">
+      <h3>Editor de tópico</h3>
+      <select id="topic-selector" onchange="selectTopic(this.value)"></select>
+      <input id="topic-title" placeholder="Título del tópico">
+      <textarea id="topic-desc" placeholder="Descripción del tópico"></textarea>
+      <button onclick="saveTopicInfo()">Guardar tópico</button>
+    </div>
+
+    <div class="section">
+      <h3>Editor general</h3>
+      <input id="all-title" placeholder="Título general">
+      <textarea id="all-desc" placeholder="Descripción general"></textarea>
+      <button onclick="saveAllInfo()">Guardar all</button>
+    </div>
+
+    <button onclick="downloadNotebook()">Guardar JSON</button>
+  </div>
+
+  <script>
+    // -------- Parser robusto (no mezcla tópicos como nodos) ----------
+    function extractNodesAndTopics(expression) {
+      const nodes = new Set();
+      const topics = new Set();
+      let cleaned = expression || "";
+
+      // A :::: topic * (x + y*z)
+      cleaned = cleaned.replace(
+        /\b([A-Za-z0-9_]+)\s*::::\s*([A-Za-z0-9_]+)\s*\*\s*\(([^)]*)\)/g,
+        (_m, leftNode, topic, group) => {
+          const n = (leftNode || '').trim();
+          const t = (topic || '').trim();
+          if (t) topics.add(t);
+          if (n && n !== t) nodes.add(n);
+          group.split(/[+*]/).forEach(tok => {
+            const v = (tok || '').trim();
+            if (v && v !== t) nodes.add(v);
+          });
+          return `${n} * (${group})`;
+        }
+      );
+
+      // A :::: topic * B
+      cleaned = cleaned.replace(
+        /\b([A-Za-z0-9_]+)\s*::::\s*([A-Za-z0-9_]+)\s*\*\s*([A-Za-z0-9_]+)/g,
+        (_m, leftNode, topic, single) => {
+          const n = (leftNode || '').trim();
+          const t = (topic || '').trim();
+          const s = (single || '').trim();
+          if (t) topics.add(t);
+          if (n && n !== t) nodes.add(n);
+          if (s && s !== t) nodes.add(s);
+          return `${n} * ${s}`;
+        }
+      );
+
+      // A :::: topic
+      cleaned = cleaned.replace(
+        /\b([A-Za-z0-9_]+)\s*::::\s*([A-Za-z0-9_]+)/g,
+        (_m, leftNode, topic) => {
+          const n = (leftNode || '').trim();
+          const t = (topic || '').trim();
+          if (t) topics.add(t);
+          if (n && n !== t) nodes.add(n);
+          return `${n}`;
+        }
+      );
+
+      // Lo que queda: extrae tokens y sólo añade como nodos si no son tópicos
+      cleaned.split(/[^A-Za-z0-9_]+/).forEach(tok => {
+        const v = (tok || '').trim();
+        if (v && !topics.has(v)) nodes.add(v);
+      });
+
+      return {
+        nodes: [...nodes].filter(n => n && !topics.has(n)).sort(),
+        topics: [...topics].sort()
+      };
+    }
+
+    // --------------------- Estado ---------------------
+    let notebooksData = {
+      notebookDataPresentation: {
+        name: "Samy",
+        expression: "LoQuePuedesHacer :::: acciones * (crearGrafo + cargarGrafo) + tuPrimerGrafo :::: empezando * crearGrafo",
+        nodes: {
+          "crearGrafo":   { "title": "Crear un nuevo grafo", "text": "Haz clic en 'nueva libreta' para empezar." },
+          "cargarGrafo":  { "title": "Cargar un grafo existente", "text": "Puedes importar un archivo JSON con tu libreta." },
+          "tuPrimerGrafo":{ "title": "Bienvenido", "text": "Este es tu primer grafo. Puedes modificarlo como quieras." }
+        },
+        topics: {
+          "acciones":  { "title": "Acciones posibles", "description": "Puedes crear o cargar grafos desde aquí." },
+          "empezando": { "title": "Primeros pasos", "description": "Inicia editando nodos o escribiendo expresiones." }
+        },
+        all: { "title": "Zigrafi, tu bloc de notas semántico", "description": "Empieza creando un grafo o cargando uno." }
+      },
+      notebookDataSandbox: {}
+    };
+
+    // ------------------ Helpers de UI ------------------
+    function setSelectOptions(selectEl, items) {
+      const prev = selectEl.value;
+      selectEl.innerHTML = items.map(k => `<option value="${k}">${k}</option>`).join('');
+      if (items.includes(prev)) selectEl.value = prev;
+    }
+
+    function updateUI() {
+      const sandbox = notebooksData.notebookDataSandbox;
+
+      document.getElementById("expr").value = sandbox.expression || "";
+      document.getElementById("all-title").value = sandbox.all?.title || "";
+      document.getElementById("all-desc").value  = sandbox.all?.description || "";
+
+      const nodeKeys   = Object.keys(sandbox.nodes || {}).sort();
+      const topicKeys  = Object.keys(sandbox.topics || {}).sort();
+      const nodeSel  = document.getElementById("node-selector");
+      const topicSel = document.getElementById("topic-selector");
+
+      setSelectOptions(nodeSel, nodeKeys);
+      setSelectOptions(topicSel, topicKeys);
+
+      if (nodeSel.value)  selectNode(nodeSel.value);
+      if (topicSel.value) selectTopic(topicSel.value);
+    }
+
+    // ----------------- Inicialización ------------------
+    function initSandbox() {
+      // Clonar presentación como base del sandbox
+      notebooksData.notebookDataSandbox = JSON.parse(JSON.stringify(notebooksData.notebookDataPresentation));
+
+      // Asegurar estructura mínima
+      const s = notebooksData.notebookDataSandbox;
+      s.nodes  = s.nodes  || {};
+      s.topics = s.topics || {};
+      s.all    = s.all    || { title: "", description: "" };
+
+      // Usar parser sobre la expresión inicial para poblar claves que falten
+      const expr = s.expression || "";
+      const { nodes, topics } = extractNodesAndTopics(expr);
+
+      nodes.forEach(n => { if (!s.nodes[n])  s.nodes[n]  = { title: "add title", text: "" }; });
+      topics.forEach(t => { if (!s.topics[t]) s.topics[t] = { title: "add title", description: "" }; });
+
+      updateUI();
+    }
+
+    // ----------------- Renderizar/parsear -----------------
+    function renderGraph() {
+      const sandbox = notebooksData.notebookDataSandbox;
+      const expr = (document.getElementById("expr").value || "").trim();
+      sandbox.expression = expr;
+
+      const { nodes, topics } = extractNodesAndTopics(expr);
+
+      // Asegurar existencia en sandbox sin pisar lo ya editado
+      sandbox.nodes  = sandbox.nodes  || {};
+      sandbox.topics = sandbox.topics || {};
+
+      nodes.forEach(n => { if (!sandbox.nodes[n])  sandbox.nodes[n]  = { title: "add title", text: "" }; });
+      topics.forEach(t => { if (!sandbox.topics[t]) sandbox.topics[t] = { title: "add title", description: "" }; });
+
+      // (Opcional) No eliminamos entradas antiguas para no perder texto ya escrito.
+      updateUI();
+    }
+
+    // ----------------- Selectores y guardado -----------------
+    function selectNode(n) {
+      const d = notebooksData.notebookDataSandbox.nodes?.[n] || {};
+      document.getElementById("node-title").value = d.title || "";
+      document.getElementById("node-text").value  = d.text  || "";
+    }
+
+    function selectTopic(t) {
+      const d = notebooksData.notebookDataSandbox.topics?.[t] || {};
+      document.getElementById("topic-title").value = d.title || "";
+      document.getElementById("topic-desc").value  = d.description || "";
+    }
+
+    function saveNodeInfo() {
+      const n = document.getElementById("node-selector").value;
+      if (!n) return;
+      notebooksData.notebookDataSandbox.nodes[n] = {
+        title: document.getElementById("node-title").value,
+        text:  document.getElementById("node-text").value
+      };
+    }
+
+    function saveTopicInfo() {
+      const t = document.getElementById("topic-selector").value;
+      if (!t) return;
+      notebooksData.notebookDataSandbox.topics[t] = {
+        title:       document.getElementById("topic-title").value,
+        description: document.getElementById("topic-desc").value
+      };
+    }
+
+    function saveAllInfo() {
+      notebooksData.notebookDataSandbox.all = {
+        title:       document.getElementById("all-title").value,
+        description: document.getElementById("all-desc").value
+      };
+    }
+
+    // ----------------- Exportar JSON -----------------
+    function downloadNotebook() {
+      const blob = new Blob(
+        [JSON.stringify(notebooksData.notebookDataSandbox, null, 2)],
+        { type: "application/json" }
+      );
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${notebooksData.notebookDataSandbox.name || "notebook"}.json`;
+      a.click();
+    }
+
+    // Go!
+    initSandbox();
+  </script>
+</body>
+</html>

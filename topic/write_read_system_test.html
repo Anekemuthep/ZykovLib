@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor de texto JSON</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    label { font-weight: bold; display: block; margin-top: 1em; }
+    input, textarea { width: 100%; padding: 0.5em; margin-top: 0.5em; font-size: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Mini Editor JSON</h1>
+
+  <label for="titleInput">Título</label>
+  <input id="titleInput" type="text" />
+
+  <label for="textInput">Texto</label>
+  <textarea id="textInput" rows="8"></textarea>
+
+  <script>
+    const defaultData = {
+      title: "título aquí",
+      text: "escriba aquí"
+    };
+
+    // Cargar desde localStorage o usar por defecto
+    let jsonData = JSON.parse(localStorage.getItem("welcomeData")) || defaultData;
+
+    // Mostrar en campos
+    document.getElementById("titleInput").value = jsonData.title;
+    document.getElementById("textInput").value = jsonData.text;
+
+    // Guardar automáticamente al escribir
+    document.getElementById("titleInput").addEventListener("input", (e) => {
+      jsonData.title = e.target.value;
+      localStorage.setItem("welcomeData", JSON.stringify(jsonData));
+    });
+
+    document.getElementById("textInput").addEventListener("input", (e) => {
+      jsonData.text = e.target.value;
+      localStorage.setItem("welcomeData", JSON.stringify(jsonData));
+    });
+  </script>
+</body>
+</html>

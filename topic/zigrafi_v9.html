@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Zigrafi v9</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      margin-top: 10px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 5px;
+      margin-top: 10px;
+    }
+    button {
+      margin-right: 10px;
+      margin-top: 10px;
+      padding: 5px 10px;
+    }
+    pre {
+      background: #f3f3f3;
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Zigrafi v9</h1>
+
+  <button onclick="saveNotebook()">Guardar JSON</button>
+  <button onclick="document.getElementById('fileInput').click()">Cargar JSON</button>
+  <input type="file" id="fileInput" style="display:none" onchange="loadNotebook(event)">
+
+  <h3>Expresión del grafo</h3>
+  <textarea id="graphExpr"></textarea>
+
+  <h3>Contenido (editable)</h3>
+  <label>Título:</label>
+  <input type="text" id="entryTitle" />
+  <label>Texto:</label>
+  <textarea id="entryText"></textarea>
+
+  <script>
+    let notebookData = {
+      name: "Samy",
+      expression: "LoQuePuedesHacer :::: acciones * (crearGrafo * cargarGrafo) + tuPrimerGrafo :::: empezando * crearGrafo",
+      nodes: {
+        "crearGrafo": { "title": "Crear un nuevo grafo", "text": "Haz clic en 'nueva libreta' para empezar.", "image": "" },
+        "cargarGrafo": { "title": "Cargar un grafo existente", "text": "Puedes importar un archivo JSON con tu libreta.", "image": "" },
+        "tuPrimerGrafo": { "title": "Bienvenido", "text": "Este es tu primer grafo. Puedes modificarlo como quieras.", "image": "" }
+      },
+      topics: {
+        "acciones": { "title": "Acciones posibles", "description": "Puedes crear o cargar grafos desde aquí." },
+        "empezando": { "title": "Primeros pasos", "description": "Inicia editando nodos o escribiendo expresiones." }
+      },
+      all: {
+        "title": "Zigrafi, tu bloc de notas semántico",
+        "description": "Empieza creando un grafo o cargando uno."
+      }
+    };
+
+    function updateView() {
+      document.getElementById("graphExpr").value = notebookData.expression || "";
+      const exampleNode = notebookData.nodes["crearGrafo"];
+      if (exampleNode) {
+        document.getElementById("entryTitle").value = exampleNode.title || "";
+        document.getElementById("entryText").value = exampleNode.text || "";
+      }
+    }
+
+    function saveNotebook() {
+      const name = prompt("Nombre del archivo (sin .json):", notebookData.name || "untitled");
+      if (!name) return;
+
+      notebookData.expression = document.getElementById("graphExpr").value;
+      notebookData.nodes["crearGrafo"].title = document.getElementById("entryTitle").value;
+      notebookData.nodes["crearGrafo"].text = document.getElementById("entryText").value;
+
+      const blob = new Blob([JSON.stringify(notebookData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name + ".json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function loadNotebook(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          notebookData = data;
+          updateView();
+        } catch (err) {
+          alert("Error al leer el archivo JSON");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    updateView();
+  </script>
+</body>
+</html>

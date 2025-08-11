@@ -1,0 +1,56 @@
+{
+  "name": "Samy",
+  "expression": "LoQuePuedesHacer :::: acciones * (crearGrafo + cargarGrafo) + tuPrimerGrafo :::: empezando * crearGrafo + customize :::: advanced * (addFonts + addNotes + addKeywords) + addFonts * addNotes",
+  "nodes": {
+    "LoQuePuedesHacer": {
+      "title": "add title",
+      "text": ""
+    },
+    "addFonts": {
+      "title": "add title",
+      "text": ""
+    },
+    "addKeywords": {
+      "title": "add title",
+      "text": ""
+    },
+    "addNotes": {
+      "title": "add title",
+      "text": ""
+    },
+    "cargarGrafo": {
+      "title": "Cargar un grafo existente",
+      "text": "Puedes importar un archivo JSON con tu libreta."
+    },
+    "crearGrafo": {
+      "title": "Crear un nuevo grafo",
+      "text": "Haz clic en 'nueva libreta' para empezar."
+    },
+    "customize": {
+      "title": "add title",
+      "text": ""
+    },
+    "tuPrimerGrafo": {
+      "title": "Bienvenido",
+      "text": "Este es tu primer grafo. Puedes modificarlo como quieras."
+    }
+  },
+  "topics": {
+    "acciones": {
+      "title": "Acciones posibles",
+      "description": "Puedes crear o cargar grafos desde aquí."
+    },
+    "advanced": {
+      "title": "add title",
+      "description": ""
+    },
+    "empezando": {
+      "title": "Primeros pasos",
+      "description": "Inicia editando nodos o escribiendo expresiones."
+    }
+  },
+  "all": {
+    "title": "Zigrafi, tu bloc de notas semántico",
+    "description": "Empieza creando un grafo o cargando uno."
+  }
+}

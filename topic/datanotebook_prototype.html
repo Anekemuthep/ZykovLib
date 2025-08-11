@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Zigrafi - Prototipo de dataNotebook</title>
+  <style>
+    body { font-family: sans-serif; display: flex; gap: 20px; margin: 20px; }
+    textarea, input { width: 100%; margin-top: 5px; font-size: 14px; }
+    .column { flex: 1; min-width: 300px; }
+    .section { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="column">
+    <div class="section">
+      <h3>Expresión del grafo</h3>
+      <textarea id="expr" rows="3"></textarea>
+      <button onclick="renderGraph()">Renderizar grafo</button>
+    </div>
+
+    <div class="section">
+      <h3>Editor de nodo</h3>
+      <select id="node-selector" onchange="selectNode(this.value)"></select>
+      <input id="node-title" placeholder="Título del nodo">
+      <textarea id="node-text" placeholder="Texto del nodo"></textarea>
+      <button onclick="saveNodeInfo()">Guardar nodo</button>
+    </div>
+
+    <div class="section">
+      <h3>Editor de tópico</h3>
+      <select id="topic-selector" onchange="selectTopic(this.value)"></select>
+      <input id="topic-title" placeholder="Título del tópico">
+      <textarea id="topic-desc" placeholder="Descripción del tópico"></textarea>
+      <button onclick="saveTopicInfo()">Guardar tópico</button>
+    </div>
+
+    <div class="section">
+      <h3>Editor general</h3>
+      <input id="all-title" placeholder="Título general">
+      <textarea id="all-desc" placeholder="Descripción general"></textarea>
+      <button onclick="saveAllInfo()">Guardar all</button>
+    </div>
+
+    <button onclick="downloadNotebook()">Guardar JSON</button>
+  </div>
+
+  <script>
+    let notebooksData = {
+      notebookDataPresentation: {
+        name: "Samy",
+        expression: "LoQuePuedesHacer :::: acciones * (crearGrafo * cargarGrafo) + tuPrimerGrafo :::: empezando * crearGrafo",
+        nodes: {
+          "crearGrafo": { "title": "Crear un nuevo grafo", "text": "Haz clic en 'nueva libreta' para empezar." },
+          "cargarGrafo": { "title": "Cargar un grafo existente", "text": "Puedes importar un archivo JSON con tu libreta." },
+          "tuPrimerGrafo": { "title": "Bienvenido", "text": "Este es tu primer grafo. Puedes modificarlo como quieras." }
+        },
+        topics: {
+          "acciones": { "title": "Acciones posibles", "description": "Puedes crear o cargar grafos desde aquí." },
+          "empezando": { "title": "Primeros pasos", "description": "Inicia editando nodos o escribiendo expresiones." }
+        },
+        all: { "title": "Zigrafi, tu bloc de notas semántico", "description": "Empieza creando un grafo o cargando uno." }
+      },
+      notebookDataSandbox: {}
+    };
+
+    // Inicializar sandbox desde presentación
+    function initSandbox() {
+      notebooksData.notebookDataSandbox = JSON.parse(JSON.stringify(notebooksData.notebookDataPresentation));
+      updateUI();
+    }
+
+    function renderGraph() {
+      const expr = document.getElementById("expr").value;
+      const sandbox = notebooksData.notebookDataSandbox;
+      sandbox.expression = expr;
+
+      // Extraer nodos y tópicos nuevos (naive)
+      const nodeNames = [...new Set(expr.match(/\b[a-zA-Z0-9_]+\b/g))];
+      nodeNames.forEach(n => {
+        if (!sandbox.nodes[n]) sandbox.nodes[n] = { title: "add title", text: "" };
+      });
+      const topicNames = [...expr.matchAll(/::::\s*([a-zA-Z0-9_]+)/g)].map(m => m[1]);
+      topicNames.forEach(t => {
+        if (!sandbox.topics[t]) sandbox.topics[t] = { title: "add title", description: "" };
+      });
+      updateUI();
+    }
+
+    function updateUI() {
+      document.getElementById("expr").value = notebooksData.notebookDataSandbox.expression;
+      document.getElementById("all-title").value = notebooksData.notebookDataSandbox.all.title;
+      document.getElementById("all-desc").value = notebooksData.notebookDataSandbox.all.description;
+
+      const nodeSel = document.getElementById("node-selector");
+      nodeSel.innerHTML = "";
+      Object.keys(notebooksData.notebookDataSandbox.nodes).forEach(k => {
+        nodeSel.innerHTML += `<option value="${k}">${k}</option>`;
+      });
+
+      const topicSel = document.getElementById("topic-selector");
+      topicSel.innerHTML = "";
+      Object.keys(notebooksData.notebookDataSandbox.topics).forEach(k => {
+        topicSel.innerHTML += `<option value="${k}">${k}</option>`;
+      });
+
+      selectNode(nodeSel.value);
+      selectTopic(topicSel.value);
+    }
+
+    function selectNode(n) {
+      const d = notebooksData.notebookDataSandbox.nodes[n] || {};
+      document.getElementById("node-title").value = d.title || "";
+      document.getElementById("node-text").value = d.text || "";
+    }
+
+    function selectTopic(t) {
+      const d = notebooksData.notebookDataSandbox.topics[t] || {};
+      document.getElementById("topic-title").value = d.title || "";
+      document.getElementById("topic-desc").value = d.description || "";
+    }
+
+    function saveNodeInfo() {
+      const n = document.getElementById("node-selector").value;
+      notebooksData.notebookDataSandbox.nodes[n] = {
+        title: document.getElementById("node-title").value,
+        text: document.getElementById("node-text").value
+      };
+    }
+
+    function saveTopicInfo() {
+      const t = document.getElementById("topic-selector").value;
+      notebooksData.notebookDataSandbox.topics[t] = {
+        title: document.getElementById("topic-title").value,
+        description: document.getElementById("topic-desc").value
+      };
+    }
+
+    function saveAllInfo() {
+      notebooksData.notebookDataSandbox.all = {
+        title: document.getElementById("all-title").value,
+        description: document.getElementById("all-desc").value
+      };
+    }
+
+    function downloadNotebook() {
+      const blob = new Blob([JSON.stringify(notebooksData.notebookDataSandbox, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${notebooksData.notebookDataSandbox.name || "notebook"}.json`;
+      a.click();
+    }
+
+    initSandbox();
+  </script>
+</body>
+</html>

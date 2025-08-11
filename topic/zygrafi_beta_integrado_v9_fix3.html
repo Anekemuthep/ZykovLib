@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zygrafi Beta Integrado — Editor + Navegación + FS</title>
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+    .main-container { display: flex; flex-direction: row; width: 100%; height: 100vh; }
+    #graph-area { flex-grow: 1; display: flex; flex-direction: column; height: 100%; }
+    #controls { padding: 0.4em 0.6em 0 0.6em; background: #eaeaea; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; }
+    #expr-container { display: flex; align-items: center; gap: 1em; padding-top: 2px; }
+    #expr { padding: 0.5em; width: 350px; font-size: 16px; position: relative; top: 2px; }
+    #controls button, #controls select { padding: 0.5em 1em; font-size: 14px; position: relative; top: 2px; }
+    #graph-container { flex-grow: 1; height: 100%; padding: 0 0 30px 40px; box-sizing: border-box; }
+    #right-panel { width: 30vw; height: 100%; background: #f4f4f4; border-left: 1px solid #ccc; padding: 1em; box-sizing: border-box; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .dropdown { position: relative; display: flex; flex-direction: column; }
+    .dropdown-content { display: none; position: absolute; background-color: white; min-width: 160px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2); z-index: 1; }
+    .dropdown-content button { width: 100%; padding: 8px 12px; text-align: left; border: none; background: none; cursor: pointer; font-weight: bold; }
+    .dropdown:hover .dropdown-content { display: block; }
+    input[type="text"], textarea { margin-top: 5px; margin-bottom: 15px; padding: 5px; font-size: 14px; width: 100%; box-sizing: border-box; }
+    button.save-btn { padding: 8px 12px; font-size: 14px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+    #navigator-view { display: none; }
+    .mode-toggle { position: absolute; top: 100px; left: 5px; display: flex; flex-direction: column; gap: 4px; }
+    .mode-toggle button { writing-mode: vertical-rl; transform: rotate(180deg); background-color: #ddd; border: 1px solid #aaa; padding: 4px; font-weight: bold; cursor: pointer; }
+    .navigator-section { padding: 1em; }
+    #navigator-topic-line { display: none; }
+    #nav-btn.active, #edit-btn.active { background-color: black; color: white; font-weight: bold; border: 2px solid black; }
+    #nav-btn, #edit-btn { background-color: white; color: black; border: 2px solid black; padding: 4px 10px; margin-bottom: 5px; cursor: pointer; }
+
+    /* Botonera FS vertical en editor */
+    .fs-vertical {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .fs-vertical button {
+      padding: 6px 10px;
+      background: #111; color: #fff; border: 1px solid #000;
+      cursor: pointer; border-radius: 4px; text-align: left;
+    }
+    .hint { font-size: 12px; color: #666; }
+
+    /* Modal simple para cargar desde carpeta */
+    .modal-backdrop { display:none; position:fixed; inset:0; background: rgba(0,0,0,0.35); align-items:center; justify-content:center; z-index: 9999; }
+    .modal { background:#fff; padding:16px; border-radius:8px; min-width:360px; max-width: 90vw; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+    .modal h4 { margin: 0 0 10px 0; }
+    .modal .row { display:flex; gap:8px; margin-top:10px; }
+    .modal .row button { flex:1; padding:8px; }
+  </style>
+</head>
+<body>
+  <div class="mode-toggle">
+    <button id="nav-btn" onclick="setMode('editor')">Editor</button>
+    <button id="edit-btn" onclick="setMode('navigator')">Navegador</button>
+  </div>
+  <div class="main-container">
+    <div id="graph-area">
+      <div id="controls">
+        <div id="expr-container" style="display: flex; align-items: center; gap: 1em;">
+          <div id="zykgreeting" style="font-size: 18px; font-weight: bold;">Zygrafi, tu bloc de notas semántico</div>
+          <!-- 🔒 Filtro por tópico: visible SOLO en modo "navegador" -->
+          <div id="filterBox" style="display:flex; align-items:center; gap:8px;">
+            <label for="dropdown-btn" style="font-weight: bold;">Filtrar por tópico:</label>
+            <div class="dropdown">
+              <button id="dropdown-btn">Todos</button>
+              <div id="dropdown-menu" class="dropdown-content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="graph-container"></div>
+    </div>
+    <div id="right-panel">
+      <div id="editor-view">
+        <div id="graph-expression-editor" style="margin-bottom: 15px;">
+          <label style="font-weight: bold;">Expresión del grafo:</label><br>
+          <textarea id="expr" rows="3" style="width: 100%; margin-top: 5px; font-size: 14px;">A :::: theme * (B + C) + D :::: topic * (viva + laVida + loca + B) + B*oreo*res</textarea>
+          <button onclick="loadGraph()" style="margin-top: 5px;">Renderizar grafo</button>
+        
+        <!-- 🔽 Selector rápido de NODO/TÓPICO para edición (estilo dataNotebook v10) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 12px;">
+          <div>
+            <label style="font-weight:bold;">Elegir nodo para editar</label>
+            <select id="editor-node-select" style="width:100%; padding:6px;">
+              <option value="">(selecciona un nodo)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-weight:bold;">Elegir tópico para editar</label>
+            <select id="editor-topic-select" style="width:100%; padding:6px;">
+              <option value="">(selecciona un tópico)</option>
+            </select>
+          </div>
+        </div>
+</div>
+
+        <!-- 🔧 Botonera FS vertical (solo 3 botones de dataNotebook) -->
+        <div style="margin: 8px 0;">
+          <h3 style="margin:4px 0;">Libretas</h3>
+          <div class="fs-vertical">
+            <button onclick="createCuratoria()">Crear curatoria (HTML)</button>
+            <button onclick="pickDatanotebooksDir()">Elegir carpeta (File System)</button>
+            <button onclick="saveToFS()">Guardar en carpeta</button>
+            <button onclick="openFsLoadModal()">Cargar desde carpeta</button>
+          </div>
+          <span id="fsStatus" class="hint"></span>
+        </div>
+
+        <hr />
+        <h3 id="node-title">Editor de nodo</h3>
+        <p><em>Haz clic en un nodo para editar sus datos.</em></p>
+        <div id="node-editor"></div>
+        <hr />
+        <h3 id="topic-title">Editor de tópico</h3>
+        <p id="current-topic-name" style="font-weight: bold; color: #333; margin-top: -10px; margin-bottom: 10px;"></p>
+        <div id="topic-editor">
+          <input id="topic-name" type="text" placeholder="Título del tópico">
+          <textarea id="topic-description" placeholder="Descripción del tópico..."></textarea>
+          <button class="save-btn" onclick="saveTopicInfo()">Guardar Tópico</button>
+        </div>
+        <hr />
+        <h3>Editor general</h3>
+        <p style="font-weight: bold; color: #333; margin-top: -10px; margin-bottom: 10px;">Información general de la red</p>
+        <div id="all-editor">
+          <input id="all-title" type="text" placeholder="Título general de la red">
+          <textarea id="all-description" placeholder="Descripción general del grafo..."></textarea>
+          <button class="save-btn" onclick="saveAllInfo()">Guardar Información General</button>
+        </div>
+      </div>
+
+      <div id="navigator-view" style="display: none;">
+        <div class="navigator-section">
+          <h2 id="navigator-title">Zigrafi, tu editor semántico</h2>
+          <p id="navigator-topic-line"><strong>Tópico:</strong> <span id="navigator-topic-name">Todos</span></p>
+          <h4 id="navigator-topic-title"></h4>
+          <p id="navigator-topic-description"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para cargar archivos desde carpeta FS -->
+  <div id="fsLoadModal" class="modal-backdrop">
+    <div class="modal">
+      <h4>Archivos en carpeta datanotebooks</h4>
+      <select id="fsFileSelect" size="8" style="width:100%"></select>
+      <div class="row">
+        <button onclick="loadFromFS()">Cargar archivo</button>
+        <button onclick="closeFsLoadModal()">Cancelar</button>
+      </div>
+      <div class="hint" style="margin-top:8px;">
+        Si no ves tu carpeta, pulsa “Elegir carpeta (File System)” y selecciona tu ruta de <em>datanotebooks</em>.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ================== Estado base ==================
+    let topicColorMap = {};
+    let fullGraph = { nodes: [], edges: [] };
+    let entryData = JSON.parse(localStorage.getItem("entryData") || "{}");
+    let entryTopic = JSON.parse(localStorage.getItem("entryTopic") || "{}");
+    let currentMode = 'editor';
+    let selectedNodeId = null;
+
+    // ================== Grafo (igual a v8 con pequeñas mejoras de highlight) ==================
+    async function loadGraph() {
+      const expression = document.getElementById("expr").value;
+      try {
+        const response = await fetch("http://localhost:8080/eval", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expression })
+        });
+        const data = await response.json();
+        fullGraph = buildGraph(data.nodes, data.edges);
+        populateCategoryDropdown(data.nodes);
+        populateEditorDropdowns();
+        renderGraph(fullGraph);
+        localStorage.setItem('lastFullGraph', JSON.stringify(fullGraph));
+        populateEditorDropdowns();
+        bindEditorDropdownEvents();
+        onCategoryChange("all");
+      } catch (err) {
+        alert("Error al cargar el grafo. Revisa la consola.");
+        console.error(err);
+      }
+    }
+
+    function buildGraph(nodes, edges) {
+      const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+      const categories = Array.from(new Set(nodes.map(n => n.category || "entry")));
+      const topicColors = {};
+      categories.forEach((cat, i) => {
+        topicColors[cat] = (cat === "entry") ? "#8C92AC" : darkenColor(palette[i % palette.length], 0.7);
+      });
+      topicColorMap = topicColors;
+
+      return {
+        nodes: nodes.map((n, i) => {
+          const isEntry = (n.category || "entry") === "entry";
+          const color = isEntry ? "#343434" : topicColors[n.category];
+          const labelColor = isEntry ? "#343434" : topicColors[n.category];
+          const radiusFactor = Math.min(3, Math.log(nodes.length + 5));
+          return {
+            id: n.nodeId,
+            label: entryData[n.nodeId]?.title || n.nodeId,
+            x: Math.cos(i * 2 * Math.PI / nodes.length) * radiusFactor,
+            y: Math.sin(i * 2 * Math.PI / nodes.length) * radiusFactor,
+            size: isEntry ? 1.5 : 5.5,
+            color,
+            labelColor,
+            category: n.category || "entry",
+            font: isEntry ? "Inconsolata" : "Orbitron",
+            labelSize: isEntry ? 10 : 14
+          };
+        }),
+        edges: edges.map(([s, t], i) => ({ id: "e" + i, source: s, target: t, color: "#ccc" }))
+      };
+    }
+
+    function renderGraph(graph) {
+      const container = document.getElementById("graph-container");
+      container.innerHTML = "";
+
+      const updatedGraph = {
+        nodes: graph.nodes.map(n => ({ ...n, color: (n.id === selectedNodeId) ? "#bbb" : n.color })),
+        edges: graph.edges
+      };
+
+      const s = new sigma({ graph: updatedGraph, container });
+      s.camera.goTo({ x: 0, y: 0, ratio: 1.1 });
+      s.settings({ labelSize: 'fixed', defaultLabelSize: 14, defaultLabelColor: "#000", labelColor: "node", defaultLabelFont: "sans-serif" });
+
+      sigma.canvas.labels.def = function(node, context, settings) {
+        const prefix = settings('prefix') || '';
+        const size = node.labelSize || settings('defaultLabelSize');
+        const font = node.font || settings('defaultLabelFont');
+        context.font = size + "px " + font;
+        context.fillStyle = node.labelColor || settings('defaultLabelColor');
+        context.textAlign = 'center';
+        context.fillText(node.label, node[prefix + 'x'], node[prefix + 'y'] + size + 2);
+      };
+
+      s.bind("clickNode", function(e) {
+        const nodeId = e.data.node.id;
+        selectedNodeId = nodeId;
+        renderGraph(graph);
+        if (currentMode === 'editor') {
+          showNodeEditor(nodeId);
+        } else if (currentMode === 'navigator') {
+          showNavigatorNodeInfo(nodeId);
+        }
+      });
+    }
+
+    function populateCategoryDropdown(nodes) {
+      const menu = document.getElementById("dropdown-menu");
+      const categories = Array.from(new Set(nodes.map(n => n.category || "entry")));
+      menu.innerHTML = "";
+
+      const allButton = document.createElement("button");
+      allButton.textContent = "Todos";
+      allButton.style.backgroundColor = "#8C92AC";
+      allButton.style.color = isDarkColor("#8C92AC") ? "#fff" : "#000";
+      allButton.onclick = () => onCategoryChange("all");
+      menu.appendChild(allButton);
+
+      categories.filter(cat => cat !== "entry").forEach((cat) => {
+        const color = topicColorMap[cat] || "#ccc";
+        const textColor = isDarkColor(color) ? "#fff" : "#000";
+        const button = document.createElement("button");
+        button.textContent = cat;
+        button.style.backgroundColor = color;
+        button.style.color = textColor;
+        button.onclick = () => onCategoryChange(cat);
+        menu.appendChild(button);
+      });
+    }
+
+    function onCategoryChange(category) {
+      const dropdownBtn = document.getElementById("dropdown-btn");
+      const categories = Array.from(new Set(fullGraph.nodes.map(n => n.category || "entry")));
+      const color = getCategoryColor(category === "all" ? "entry" : category, categories);
+      const textColor = isDarkColor(color) ? "#fff" : "#000";
+
+      dropdownBtn.textContent = (category === "all" ? "Todos" : category);
+      dropdownBtn.style.backgroundColor = color;
+      dropdownBtn.style.color = textColor;
+
+      if (category === "all") {
+        renderGraph(fullGraph);
+        populateEditorDropdowns();
+        bindEditorDropdownEvents();
+      } else {
+        const filteredNodes = fullGraph.nodes.filter(n =>
+          n.category === category ||
+          fullGraph.edges.some(e =>
+            (e.source === n.id && fullGraph.nodes.find(nn => nn.id === e.target)?.category === category) ||
+            (e.target === n.id && fullGraph.nodes.find(nn => nn.id === e.source)?.category === category)
+          )
+        );
+        const nodeIds = new Set(filteredNodes.map(n => n.id));
+        const filteredEdges = fullGraph.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+        renderGraph({ nodes: filteredNodes, edges: filteredEdges });
+      }
+
+      if (currentMode === "navigator") loadNavigatorView();
+      if (selectedNodeId) {
+        const found = fullGraph.nodes.find(n => n.id === selectedNodeId);
+        if (!found) selectedNodeId = null;
+      }
+    }
+
+    function getCategoryColor(cat, categories) {
+      const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+      const index = categories.indexOf(cat);
+      return (cat === "entry") ? "#8C92AC" : darkenColor(palette[index % palette.length], 0.7);
+    }
+    function isDarkColor(hex) {
+      const r = parseInt(hex.substr(1, 2), 16);
+      const g = parseInt(hex.substr(3, 2), 16);
+      const b = parseInt(hex.substr(5, 2), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      return brightness < 128;
+    }
+    function darkenColor(hex, factor = 0.7) {
+      const r = Math.floor(parseInt(hex.substr(1, 2), 16) * factor);
+      const g = Math.floor(parseInt(hex.substr(3, 2), 16) * factor);
+      const b = Math.floor(parseInt(hex.substr(5, 2), 16) * factor);
+      return "#" + r.toString(16).padStart(2, "0") + g.toString(16).padStart(2, "0") + b.toString(16).padStart(2, "0");
+    }
+
+    
+    // ================== Dropdowns Editor (nodo/tópico) ==================
+    function populateEditorDropdowns() {
+      // Nodos
+      const nodeSel = document.getElementById('editor-node-select');
+      if (nodeSel) {
+        const items = [...fullGraph.nodes].sort((a,b) =>
+          (entryData[a.id]?.title || a.label || a.id).localeCompare(entryData[b.id]?.title || b.label || b.id, 'es', {numeric:true})
+        );
+        const opts = ['<option value="">(selecciona un nodo)</option>']
+          .concat(items.map(n => {
+            const label = entryData[n.id]?.title || n.label || n.id;
+            return `<option value="${n.id}">${label} — [${n.id}]</option>`;
+          }));
+        nodeSel.innerHTML = opts.join('');
+      }
+
+      // Tópicos (a partir de categorías del grafo, excepto 'entry')
+      const topicSel = document.getElementById('editor-topic-select');
+      if (topicSel) {
+        const topics = Array.from(new Set(fullGraph.nodes.map(n => n.category || "entry")))
+          .filter(t => t !== 'entry')
+          .sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));
+        const opts = ['<option value="">(selecciona un tópico)</option>']
+          .concat(topics.map(t => `<option value="${t}">${t}</option>`));
+        topicSel.innerHTML = opts.join('');
+      }
+    }
+
+    function bindEditorDropdownEvents() {
+      const nodeSel = document.getElementById('editor-node-select');
+      if (nodeSel) {
+        nodeSel.onchange = (e) => {
+          const id = e.target.value;
+          if (id) {
+            selectedNodeId = id;
+            renderGraph(fullGraph);
+        populateEditorDropdowns();
+        bindEditorDropdownEvents();
+            showNodeEditor(id);
+          }
+        };
+      }
+      const topicSel = document.getElementById('editor-topic-select');
+      if (topicSel) {
+        topicSel.onchange = (e) => {
+          const topic = e.target.value;
+          if (!topic) return;
+          // Cargar los datos del tópico en el editor
+          const key = topic;
+          const data = entryTopic[key] || { title:"", description:"" };
+          document.getElementById('topic-name').value = data.title || "";
+          document.getElementById('topic-description').value = data.description || "";
+          document.getElementById('current-topic-name').textContent = key;
+        };
+      }
+    }
+
+    // ================== Paneles ==================
+    function showNodeEditor(nodeId) {
+      document.getElementById("node-title").textContent = "Editor de nodo " + nodeId;
+      const editor = document.getElementById("node-editor");
+      const data = entryData[nodeId] || { title: "", text: "", image: "" };
+      editor.innerHTML = `
+        <label>Título:</label>
+        <input type="text" id="titleInput" value="${data.title}" />
+        <label>Texto:</label>
+        <textarea id="textInput" rows="6">${data.text}</textarea>
+        <label>Ruta de imagen:</label>
+        <input type="text" id="imageInput" value="${data.image}" />
+        <button class="save-btn" onclick="saveNodeData('${nodeId}')">Guardar</button>
+        <div style="margin-top:10px;">
+          <strong>Preview:</strong><br>
+          <img src="${data.image}" style="width:100%; max-height:300px; object-fit:contain; margin-top:5px;">
+        </div>
+      `;
+    }
+
+    function saveNodeData(nodeId) {
+      const title = document.getElementById("titleInput").value;
+      const text = document.getElementById("textInput").value;
+      const image = document.getElementById("imageInput").value;
+      entryData[nodeId] = { title, text, image };
+      localStorage.setItem("entryData", JSON.stringify(entryData));
+      alert("Datos guardados para " + nodeId);
+    }
+
+    function saveTopicInfo() {
+      const topicSel = document.getElementById('editor-topic-select');
+      if (!topicSel || !topicSel.value) {
+        alert('Elige un tópico en el selector de edición antes de guardar.');
+        return;
+      }
+      const key = topicSel.value;
+      const title = document.getElementById('topic-name').value || '';
+      const description = document.getElementById('topic-description').value || '';
+      const data = entryTopic[key] || {};
+      entryTopic[key] = { ...data, title, description };
+      localStorage.setItem('entryTopic', JSON.stringify(entryTopic));
+      alert('Tópico guardado: ' + key);
+    }
+;
+      entryTopic[key] = { ...data, title, description };
+      localStorage.setItem("entryTopic", JSON.stringify(entryTopic));
+      alert("Tópico guardado: " + key);
+    }
+
+    function saveAllInfo() {
+      const title = document.getElementById("all-title").value;
+      const description = document.getElementById("all-description").value;
+      // Guardamos en tópico especial __All para navegación
+      entryTopic["__All"] = { title, description };
+      localStorage.setItem("entryTopic", JSON.stringify(entryTopic));
+      alert("Información general guardada.");
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      const editor = document.getElementById('editor-view');
+      const navigator = document.getElementById('navigator-view');
+      const navBtn = document.getElementById('nav-btn');
+      const editBtn = document.getElementById('edit-btn');
+      const filterBox = document.getElementById('filterBox');
+
+      if (mode === 'navigator') {
+        editor.style.display = 'none';
+        navigator.style.display = 'block';
+        document.getElementById('graph-expression-editor').style.display = 'none';
+        filterBox.style.display = 'flex';            // ✅ filtro visible en navegador
+        navBtn.classList.add("active");
+        editBtn.classList.remove("active");
+        loadNavigatorView();
+      } else {
+        editor.style.display = 'block';
+        navigator.style.display = 'none';
+        document.getElementById('graph-expression-editor').style.display = 'block';
+        filterBox.style.display = 'none';            // ✅ filtro oculto en editor
+        editBtn.classList.add("active");
+        populateEditorDropdowns();
+        bindEditorDropdownEvents();
+        navBtn.classList.remove("active");
+      }
+    }
+
+    function loadNavigatorView() {
+      const dropdown = document.getElementById('dropdown-btn');
+      const selected = dropdown?.textContent?.trim() || "Todos";
+      const key = (selected === "Todos") ? "__All" : selected;
+      const data = entryTopic[key] || { title: "", description: "" };
+
+      document.getElementById("navigator-title").textContent = data.title || "Zigrafi, tu editor semántico";
+
+      const titleEl = document.getElementById("navigator-title");
+      if (!selected.startsWith("Nodo: ")) {
+        const color = topicColorMap[selected === "Todos" ? "entry" : selected] || "#ccc";
+        const textColor = isDarkColor(color) ? "#fff" : "#000";
+        titleEl.style.backgroundColor = color;
+        titleEl.style.color = textColor;
+        titleEl.style.padding = "6px 10px";
+        titleEl.style.borderRadius = "6px";
+        titleEl.style.display = "inline-block";
+      } else {
+        titleEl.style.backgroundColor = "";
+        titleEl.style.color = "";
+        titleEl.style.padding = "";
+        titleEl.style.borderRadius = "";
+        titleEl.style.display = "";
+      }
+
+      document.getElementById("navigator-topic-title").textContent = "";
+      document.getElementById("navigator-topic-description").innerHTML = `<p>${data.description || "(sin descripción)"}</p>`;
+    }
+
+    function showNavigatorNodeInfo(nodeId) {
+      const data = entryData[nodeId] || { title: "", text: "", image: "" };
+      document.getElementById("navigator-title").textContent = data.title || nodeId;
+      document.getElementById("navigator-topic-name").textContent = "Nodo: " + nodeId;
+      document.getElementById("navigator-topic-title").textContent = "";
+      document.getElementById("navigator-topic-description").innerHTML = `
+        <p>${data.text || "(sin descripción)"}</p>
+        ${data.image ? `<img src="${data.image}" style="max-width:100%; max-height:300px; margin-top:10px;">` : ""}
+      `;
+    }
+
+    // ================== FS Access API (subset de dataNotebook) ==================
+    const FS_DB_NAME = 'zygrafi-fs';
+    const FS_STORE = 'handles';
+    const FS_KEY = 'datanotebooksDir';
+
+    function idbOpen() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(FS_DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(FS_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function idbSet(key, val) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(FS_STORE, 'readwrite');
+        tx.objectStore(FS_STORE).put(val, key);
+        tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function idbGet(key) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(FS_STORE, 'readonly');
+        const req = tx.objectStore(FS_STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function verifyPermission(handle, writable) {
+      const opts = { mode: writable ? 'readwrite' : 'read' };
+      if ((await handle.queryPermission(opts)) === 'granted') return true;
+      if ((await handle.requestPermission(opts)) === 'granted') return true;
+      return false;
+    }
+
+    async function getSavedDirHandle() {
+      try { return await idbGet(FS_KEY); } catch { return null; }
+    }
+
+    async function pickDatanotebooksDir() {
+      if (!('showDirectoryPicker' in window)) {
+        alert('Tu navegador no soporta File System Access API. Usa Chrome/Edge en HTTPS o localhost.');
+        return;
+      }
+      try {
+        const dirHandle = await window.showDirectoryPicker();
+        const ok = await verifyPermission(dirHandle, true);
+        if (!ok) { alert('Permiso denegado.'); return; }
+        await idbSet(FS_KEY, dirHandle);
+        reflectFsStatus('Carpeta vinculada.');
+      } catch (e) { console.warn(e); }
+    }
+
+    async function reflectFsStatus(msg) {
+      const span = document.getElementById('fsStatus');
+      const handle = await getSavedDirHandle();
+      if (!handle) { span.textContent = '(sin carpeta FS)'; return; }
+      span.textContent = msg || '(carpeta FS lista)';
+    }
+
+    async function listFsJsonFiles() {
+      const dirHandle = await getSavedDirHandle();
+      if (!dirHandle) return [];
+      const ok = await verifyPermission(dirHandle, false);
+      if (!ok) return [];
+      const files = [];
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === 'file' && name.toLowerCase().endsWith('.json')) files.push({ name, handle });
+      }
+      files.sort((a,b)=>a.name.localeCompare(b.name,'es',{numeric:true}));
+      return files;
+    }
+
+    // Obtiene el JSON actual para guardar
+    function getCurrentNotebook() {
+      const expression = document.getElementById("expr").value || "";
+      const allTitle = document.getElementById("all-title").value || "";
+      const allDesc = document.getElementById("all-description").value || "";
+      // Leemos de localStorage para coherencia
+      const nodes = JSON.parse(localStorage.getItem("entryData") || "{}");
+      const topics = JSON.parse(localStorage.getItem("entryTopic") || "{}");
+      return { name: "", expression, nodes, topics, all: { title: allTitle, description: allDesc } };
+    }
+
+    function applyNotebook(json) {
+      try {
+        const { expression, nodes, topics, all } = json || {};
+        if (expression != null) document.getElementById("expr").value = expression;
+        entryData = nodes || {};
+        entryTopic = topics || {};
+        localStorage.setItem("entryData", JSON.stringify(entryData));
+        localStorage.setItem("entryTopic", JSON.stringify(entryTopic));
+        document.getElementById("all-title").value = all?.title || "";
+        document.getElementById("all-description").value = all?.description || "";
+        // Re-render
+        loadGraph();
+      } catch (e) {
+        alert("Estructura de libreta inválida.");
+      }
+    }
+
+    async function saveToFS() {
+      const dirHandle = await getSavedDirHandle();
+      if (!dirHandle) { alert('Primero elige la carpeta (File System).'); return; }
+      const ok = await verifyPermission(dirHandle, true);
+      if (!ok) { alert('Sin permiso de escritura en la carpeta.'); return; }
+
+      const s = getCurrentNotebook();
+      let filename = prompt('Nombre de archivo (sin extensión):', 'notebook');
+      if (filename === null) return;
+      filename = filename.trim();
+      if (!filename) { alert('Nombre vacío.'); return; }
+
+      const fileHandle = await dirHandle.getFileHandle(filename + '.json', { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' }));
+      await writable.close();
+      alert(`Guardado en carpeta: ${filename}.json`);
+    }
+
+    function openFsLoadModal() {
+      fillFsList().then(() => {
+        document.getElementById('fsLoadModal').style.display = 'flex';
+      });
+    }
+    function closeFsLoadModal() {
+      document.getElementById('fsLoadModal').style.display = 'none';
+    }
+    async function fillFsList() {
+      const sel = document.getElementById('fsFileSelect');
+      sel.innerHTML = '<option>(cargando...)</option>';
+      const files = await listFsJsonFiles();
+      if (!files.length) { sel.innerHTML = '<option disabled>(no hay .json)</option>'; return; }
+      sel.innerHTML = files.map(f => `<option value="${f.name}">${f.name}</option>`).join('');
+    }
+    async function loadFromFS() {
+      const dirHandle = await getSavedDirHandle();
+      if (!dirHandle) { alert('Primero elige la carpeta (File System).'); return; }
+      const ok = await verifyPermission(dirHandle, false);
+      if (!ok) { alert('Sin permiso de lectura.'); return; }
+      const sel = document.getElementById('fsFileSelect');
+      const name = sel.value;
+      if (!name) return;
+      const fileHandle = await dirHandle.getFileHandle(name);
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      try {
+        const json = JSON.parse(text);
+        applyNotebook(json);
+        closeFsLoadModal();
+      } catch (e) {
+        alert('JSON inválido.');
+      }
+    }
+
+    // ================== Init ==================
+    window.onload = () => {
+      const dropdownBtn = document.getElementById("dropdown-btn");
+      if (!dropdownBtn.textContent.trim()) dropdownBtn.textContent = "Todos";
+      document.getElementById('editor-view').style.display = 'block';
+      document.getElementById('navigator-view').style.display = 'none';
+      document.getElementById('filterBox').style.display = 'none'; // filtro oculto en editor
+      reflectFsStatus();
+      // Render inicial (si hay backend)
+      try { loadGraph(); } catch(e) {}
+    };
+  </script>
+
+<script>
+// ===== Curatoría export (navegación-only) con tema y footer =====
+function createCuratoria() {
+  var name = prompt('Nombre de la curatoría (sin extensión):', 'mi-curatoria');
+  if (name === null) return;
+  name = String(name);
+  var safeName = name.replace(/[^\w\- ]+/g, '').trim() || 'mi-curatoria';
+  var safeTitle = safeName;
+
+  var author = prompt('Autor / firma (opcional):', '') || '';
+  author = String(author).trim().replace(/[<>]/g, '');
+
+  var startTheme = prompt('Tema inicial: escribe "oscuro" o "claro" (por defecto: claro)', '') || '';
+  startTheme = startTheme.toLowerCase().trim();
+  if (startTheme !== 'oscuro' && startTheme !== 'claro') startTheme = 'claro';
+  var initialTheme = (startTheme === 'oscuro') ? 'dark' : 'light';
+
+  // Estado actual
+  var notebook = getCurrentNotebook();
+  var nodesMap = (notebook && notebook.nodes) ? notebook.nodes : {};
+  var topicsMap = (notebook && notebook.topics) ? notebook.topics : {};
+  var fixedGraph = (window.fullGraph && Array.isArray(fullGraph.nodes) && fullGraph.nodes.length > 0)
+      ? fullGraph
+      : (function(){
+          try {
+            var cached = JSON.parse(localStorage.getItem('lastFullGraph') || 'null');
+            if (cached && Array.isArray(cached.nodes) && cached.nodes.length > 0) return cached;
+          } catch(e) {}
+
+          var ids = Object.keys(nodesMap);
+          var N = Math.max(ids.length, 1);
+          var radius = Math.min(5, Math.log(N + 5));
+          var arr = ids.map(function(id, i){
+            var angle = (i * 2 * Math.PI) / N;
+            var entry = nodesMap[id] || {};
+            return {
+              id: id,
+              label: entry.title || id,
+              x: Math.cos(angle) * radius,
+              y: Math.sin(angle) * radius,
+              size: 1.5,
+              color: "#343434",
+              labelColor: "#343434",
+              category: "entry",
+              font: "Inconsolata",
+              labelSize: 10
+            };
+          });
+          return { nodes: arr, edges: [] };
+        })();
+  var payload = JSON.stringify({ name: safeName, notebook: notebook, entryData: nodesMap, entryTopic: topicsMap, graph: fixedGraph });
+  var payloadSafe = payload.replace(/<\/script/gi, '<\\/script');
+  var createdAt = new Date().toLocaleString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  var parts = [];
+  parts.push('<!DOCTYPE html>');
+  parts.push('<html lang="es">');
+  parts.push('<head>');
+  parts.push('  <meta charset="UTF-8" />');
+  parts.push('  <meta name="viewport" content="width=device-width, initial-scale=1" />');
+  parts.push('  <title>Curatoría — ' + safeTitle + '</title>');
+  parts.push('  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"><' + '/script>');
+  parts.push('  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&family=Orbitron:wght@500&display=swap" rel="stylesheet">');
+  parts.push('  <style>');
+  parts.push('    :root { --bg:#f7f7f7; --fg:#111; --panel-bg:#fafafa; --header-bg:#111; --header-fg:#fff; --border:#ddd; --chip-bg:#8C92AC; --chip-fg:#fff; --btn-bg:#e8e8e8; --btn-fg:#111; }');
+  parts.push('    [data-theme="dark"] { --bg:#0f1115; --fg:#e8e8e8; --panel-bg:#11161c; --header-bg:#0b0e14; --header-fg:#e8e8e8; --border:#2a2f3a; --chip-bg:#5a5f72; --chip-fg:#fff; --btn-bg:#1a1f2a; --btn-fg:#e8e8e8; }');
+  parts.push('    html, body { height:100%; }');
+  parts.push('    body { font-family: sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; background: var(--bg); color: var(--fg); }');
+  parts.push('    .main { display: grid; grid-template-columns: 1fr 360px; grid-template-rows: 56px 1fr; height: 100vh; }');
+  parts.push('    header { grid-column: 1 / 3; display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; background: var(--header-bg); color: var(--header-fg); }');
+  parts.push('    header .title { font-weight: 700; letter-spacing: .3px; }');
+  parts.push('    .controls { display:flex; align-items:center; gap:10px; }');
+  parts.push('    .theme-btn { border:1px solid var(--border); background: var(--btn-bg); color: var(--btn-fg); padding:6px 10px; border-radius:8px; cursor:pointer; }');
+  parts.push('    header .topic-filter { display:flex; align-items:center; gap:8px; }');
+  parts.push('    header .dropdown { position: relative; display: inline-block; }');
+  parts.push('    header .dropdown-content { display: none; position: absolute; background-color: var(--panel-bg); min-width: 160px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2); z-index: 10; }');
+  parts.push('    header .dropdown-content button { width: 100%; padding: 8px 12px; text-align: left; border: none; background: none; cursor: pointer; font-weight: bold; color: var(--fg); }');
+  parts.push('    header .dropdown:hover .dropdown-content { display: block; }');
+  parts.push('    #graph { background: var(--bg); }');
+  parts.push('    #graph, #side { height: calc(100vh - 56px); }');
+  parts.push('    #side { border-left: 1px solid var(--border); padding: 12px; overflow:auto; background: var(--panel-bg); color: var(--fg); }');
+  parts.push('    h2.badge { display:inline-block; padding:6px 10px; border-radius: 8px; background: var(--chip-bg); color: var(--chip-fg); }');
+  parts.push('    img.resp { max-width: 100%; max-height: 320px; display:block; margin-top:10px; }');
+  parts.push('    footer { border-top:1px solid var(--border); margin-top:14px; padding-top:10px; font-size:12px; opacity:.85; }');
+  parts.push('  </style>');
+  parts.push('</head>');
+  parts.push('<body>');
+  parts.push('  <div class="main">');
+  parts.push('    <header>');
+  parts.push('      <div class="title">Curatoría — ' + safeTitle + '</div>');
+  parts.push('      <div class="controls">');
+  parts.push('        <div class="topic-filter">');
+  parts.push('          <label><strong>Filtrar por tópico:</strong></label>');
+  parts.push('          <div class="dropdown">');
+  parts.push('            <button id="dropdown-btn">Todos</button>');
+  parts.push('            <div id="dropdown-menu" class="dropdown-content"></div>');
+  parts.push('          </div>');
+  parts.push('        </div>');
+  parts.push('        <button id="theme-toggle" class="theme-btn" title="Cambiar tema">Tema: ' + (initialTheme === 'dark' ? 'Oscuro' : 'Claro') + '</button>');
+  parts.push('      </div>');
+  parts.push('    </header>');
+  parts.push('    <div id="graph"></div>');
+  parts.push('    <aside id="side">');
+  parts.push('      <h2 id="nav-title" class="badge">Museo personal</h2>');
+  parts.push('      <div id="nav-content"></div>');
+  parts.push('      <footer id="credits">');
+  parts.push('        Creado' + (author ? ' por <strong>' + author + '</strong>' : '') + ' — ' + createdAt + ' · Hecho con Zygrafi');
+  parts.push('      </footer>');
+  parts.push('    </aside>');
+  parts.push('  </div>');
+  parts.push('  <script id="notebookData" type="application/json">' + payloadSafe + '<' + '/script>');
+  parts.push('  <script>');
+  parts.push('    var data = JSON.parse(document.getElementById("notebookData").textContent);');
+  parts.push('    var entryData = data.entryData || {};');
+  parts.push('    var entryTopic = data.entryTopic || {};');
+  parts.push('    var graph = data.graph || {nodes:[], edges:[]};');
+  parts.push('    var selectedNodeId = null;');
+  parts.push('    var topicColorMap = {};');
+  parts.push('    var THEME_KEY = "curatoria-theme";');
+  parts.push('    function applyTheme(t){ document.documentElement.setAttribute("data-theme", t); localStorage.setItem(THEME_KEY, t); document.getElementById("theme-toggle").textContent = "Tema: " + (t==="dark"?"Oscuro":"Claro"); }');
+  parts.push('    function currentTheme(){ return document.documentElement.getAttribute("data-theme") || "light"; }');
+  parts.push('    function isDarkColor(hex){ if(!/^#([0-9a-fA-F]{6})$/.test(hex)) return false; var r=parseInt(hex.substr(1,2),16), g=parseInt(hex.substr(3,2),16), b=parseInt(hex.substr(5,2),16); var br=(r*299+g*587+b*114)/1000; return br<128; }');
+  parts.push('    function darkenColor(hex, factor){ if(factor==null) factor=0.7; if(!/^#([0-9a-fA-F]{6})$/.test(hex)) return "#999"; var r=Math.floor(parseInt(hex.substr(1,2),16)*factor), g=Math.floor(parseInt(hex.substr(3,2),16)*factor), b=Math.floor(parseInt(hex.substr(5,2),16)*factor); return "#" + r.toString(16).padStart(2,"0") + g.toString(16).padStart(2,"0") + b.toString(16).padStart(2,"0"); }');
+  parts.push('    function populateDropdown(nodes){ var menu=document.getElementById("dropdown-menu"); var categories=Array.from(new Set(nodes.map(function(n){ return n.category||"entry"; }))); var palette=["#FF00FF","#00FFFF","#C0C0C0","#00FF00","#FF69B4","#FFFF00","#00BFFF","#DDA0DD"]; topicColorMap={}; categories.forEach(function(cat,i){ topicColorMap[cat]=(cat==="entry")?"#8C92AC":darkenColor(palette[i%palette.length],0.7); }); menu.innerHTML=""; var all=document.createElement("button"); all.textContent="Todos"; all.style.backgroundColor="#8C92AC"; all.style.color=isDarkColor("#8C92AC")?"#fff":"#000"; all.onclick=function(){ onCategoryChange("all"); }; menu.appendChild(all); categories.filter(function(c){return c!=="entry";}).forEach(function(cat){ var color=topicColorMap[cat]||"#ccc"; var txt=isDarkColor(color)?"#fff":"#000"; var b=document.createElement("button"); b.textContent=cat; b.style.backgroundColor=color; b.style.color=txt; b.onclick=function(){ onCategoryChange(cat); }; menu.appendChild(b); }); }');
+  parts.push('    function render(g){ var container=document.getElementById("graph"); container.innerHTML=""; var updated={ nodes: g.nodes.map(function(n){var o={}; for(var k in n){o[k]=n[k];} o.color=(n.id===selectedNodeId)?"#bbb":n.color; return o;}), edges: g.edges }; var s=new sigma({graph:updated, container:container}); s.camera.goTo({x:0,y:0,ratio:1.1}); s.settings({labelSize:"fixed", defaultLabelSize:14, defaultLabelColor:"#000", labelColor:"node", defaultLabelFont:"sans-serif"}); sigma.canvas.labels.def=function(node,ctx,settings){ var p=settings("prefix")||""; var size=node.labelSize||settings("defaultLabelSize"); var font=node.font||settings("defaultLabelFont"); ctx.font=size+"px "+font; ctx.fillStyle=node.labelColor||settings("defaultLabelColor"); ctx.textAlign="center"; ctx.fillText(node.label, node[p+"x"], node[p+"y"]+size+2); }; s.bind("clickNode", function(e){ selectedNodeId=e.data.node.id; render(g); showNode(selectedNodeId); }); }');
+  parts.push('    function onCategoryChange(cat){ var btn=document.getElementById("dropdown-btn"); var color=(cat==="all")?"#8C92AC":(topicColorMap[cat]||"#ccc"); var txt=isDarkColor(color)?"#fff":"#000"; btn.textContent=(cat==="all")?"Todos":cat; btn.style.backgroundColor=color; btn.style.color=txt; if(cat==="all"){ render(graph); loadTopic("__All"); return; } var nodes=graph.nodes.filter(function(n){ if(n.category===cat) return true; return graph.edges.some(function(e){ var s=graph.nodes.find(function(nn){return nn.id===e.source;}); var t=graph.nodes.find(function(nn){return nn.id===e.target;}); return (e.source===n.id && t && t.category===cat) || (e.target===n.id && s && s.category===cat); }); }); var ids=new Set(nodes.map(function(n){return n.id;})); var edges=graph.edges.filter(function(e){return ids.has(e.source)&&ids.has(e.target);}); render({nodes:nodes, edges:edges}); loadTopic(cat); }');
+  parts.push('    function showNode(id){ var d=entryData[id]||{title:"",text:"",image:""}; var titleEl=document.getElementById("nav-title"); titleEl.textContent=d.title||id; titleEl.className="badge"; document.getElementById("nav-content").innerHTML="<p>"+(d.text||"(sin descripción)")+"</p>"+(d.image?\'<img class=\\"resp\\" src="\'+d.image+\'">\':""); }');
+  parts.push('    function loadTopic(cat){ var d=entryTopic[cat]||{title:"",description:""}; var color=topicColorMap[cat]||"#8C92AC"; var txt=isDarkColor(color)?"#fff":"#000"; var titleEl=document.getElementById("nav-title"); titleEl.textContent=d.title||(cat==="__All"?"Todos":cat); titleEl.style.backgroundColor=color; titleEl.style.color=txt; titleEl.className="badge"; document.getElementById("nav-content").innerHTML="<p>"+(d.description||"(sin descripción)")+"</p>"; }');
+  parts.push('    window.onload=function(){ var saved=localStorage.getItem(THEME_KEY); var initial=saved?saved:"' + initialTheme + '"; applyTheme(initial); document.getElementById("theme-toggle").onclick=function(){ applyTheme(currentTheme()==="light"?"dark":"light"); }; populateDropdown(graph.nodes||[]); document.getElementById("dropdown-btn").textContent="Todos"; render(graph); var all=entryTopic["__All"]||{}; if(all.title||all.description){ document.getElementById("nav-title").textContent=all.title||"Museo personal"; document.getElementById("nav-content").innerHTML="<p>"+(all.description||"")+"</p>"; } };');
+  parts.push('  <' + '/script>');
+  parts.push('</body>');
+  parts.push('</html>');
+
+  var htmlDoc = parts.join('\n');
+  var blob = new Blob([htmlDoc], { type: "text/html;charset=utf-8" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = safeName + ".html";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 2000);
+}
+</script>
+
+</body>
+</html>

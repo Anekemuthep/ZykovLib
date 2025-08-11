@@ -1,0 +1,152 @@
+{
+  "name": "",
+  "expression": "surrender :::: Chemical_Brothers * (Musique_Response + Under_The_Influence + Out_of_Control + Orange_Wedge + Let_Forever_Be + The_Sunshine_Underground + Asslep_from_day) + Tour_de_france :::: Kraftwerk * (Etape1+Etape2+CaeboHydroProtein+AeroDinamik) +Wip3out :::: Wipeout_soundtracks * (Under_The_Influence + AeroDinamik) + Exit_Planet_Dust :::: Chemical_Brothers * (Sound_of_the_siren + Chemical_Beats + Life_i_sweet) + WipEout :::: Wipeout_soundtracks * (Cairodrome + Cardinal_dancer + Cold_comfort + DOH_T + Chemical_Beats) + Slipstream :::: CoLD_SToRAGE * (Cairodrome + Cardinal_dancer + Cold_comfort)",
+  "nodes": {
+    "AeroDinamik": {
+      "title": "Aerodynamik",
+      "text": "Joyita de Kraftwerk donde la precisión maquínica se encuentra con un groove funk casi humano. Una marcha robótica que define la estética de *Tour de France *. como un tour de force de beats en movmiento.",
+      "image": "undefined"
+    },
+    "Asslep_from_day": {
+      "title": "Asslep form Day",
+      "text": "Una joya atmosférica del dúo, con la voz de Hope Sandoval, que ofrece una pausa melancólica en medio del frenesí del álbum.",
+      "image": "undefined"
+    },
+    "CaeboHydroProtein": {
+      "title": "Protein",
+      "text": "Química y biología representadas en un una voz mecánica, esta pista fusiona lo humano con lo robótico, como un atleta aumentado.",
+      "image": "undefined"
+    },
+    "Cairodrome": {
+      "title": "Cairodrome",
+      "text": "Compuesta por CoLD SToRAGE, esta pista encapsula el espíritu del WipEout original. Rítmica, hipnóica, y absolutamente peligrosa en modo Phantom.",
+      "image": "undefined"
+    },
+    "Cardinal_dancer": {
+      "title": "Cardinal Dancer",
+      "text": "Hipnótica e intensa, una danza cardinal para los pilotos de gravedad invertida.",
+      "image": "undefined"
+    },
+    "Chemical_Beats": {
+      "title": "Chemical Beats",
+      "text": "Una de las primeras explosiones sónicas de Chemical Brothers. Brutal, tribal y frenética. También aparece en el WipEout original.",
+      "image": "undefined"
+    },
+    "Cold_comfort": {
+      "title": "Cold Comfort",
+      "text": "Fría pero reconfortante, esta pista combina pads ambientales con percusión nítida. Aparece tanto en *Slipstream* como en el WipEout original.",
+      "image": "undefined"
+    },
+    "DOH_T": {
+      "title": "Doh T",
+      "text": "Uno de los temas más oscuros y agresivos de WipEout. Ideal para circuitos de prueba y sin compasión.",
+      "image": "undefined"
+    },
+    "Etape1": {
+      "title": "Etape 1",
+      "text": "Primera parte del viaje sonoro de *Tour de France Soundtracks*. Precisión metronímica para calentar motores.",
+      "image": "undefined"
+    },
+    "Etape2": {
+      "title": "Etape 2",
+      "text": "Una continuación hipnótica, con un groove que simula pedaleos futuristas bajo cielos sintéticos.",
+      "image": "undefined"
+    },
+    "Exit_Planet_Dust": {
+      "title": "Exit Planet Dust",
+      "text": "Primer álbum de Chemical Brothers. Una declaración de guerra sonora que reconfiguró el dance británico.",
+      "image": "undefined"
+    },
+    "Let_Forever_Be": {
+      "title": "Let Forever Be",
+      "text": "Canción psicodélica con toques beatle, que introduce un lirismo onírico en medio del caos digital del álbum *Surrender*.",
+      "image": "undefined"
+    },
+    "Life_i_sweet": {
+      "title": "Life i sweet",
+      "text": "Una colisión entre dulzura melódica y caos ácido. Un contraste perfecto para reflejar la experiencia WipEout.",
+      "image": "undefined"
+    },
+    "Musique_Response": {
+      "title": "Musique Response",
+      "text": "Un himno digital del álbum *Surrender* (1999), este track es una oda a la repetición y al mantra electrónico. Ideal para circuitos de velocidad y carreras que rozan la sinestesia.",
+      "image": "undefined"
+    },
+    "Orange_Wedge": {
+      "title": "Orange Wedge",
+      "text": "Track instrumental con una energía funky y percusión sincopada que evoca carreras en neones anaranjados.",
+      "image": "undefined"
+    },
+    "Out_of_Control": {
+      "title": "Out of Control",
+      "text": "Una colaboración entre The Chemical Brothers y Bernard Sumner de New Order. Un grito bailable contra el caos moderno.",
+      "image": "undefined"
+    },
+    "Slipstream": {
+      "title": "Slipstream",
+      "text": "Uno de los álbumes más recordados de CoLD SToRAGE, diseñado como expansión espiritual del universo WipEout. Las pistas incluidas son reimaginaciones de los clásicos del juego.",
+      "image": "undefined"
+    },
+    "Sound_of_the_siren": {
+      "title": "Sound of the siren",
+      "text": "Canción cinética de *Exit Planet Dust* que te sumerge en una carrera sin frenos desde los primeros segundos.",
+      "image": "undefined"
+    },
+    "The_Sunshine_Underground": {
+      "title": "The Sunshine Underground",
+      "text": "Una travesía progresiva y emocional con capas de sintetizadores que evolucionan como una pista de velocidad modulada.",
+      "image": "undefined"
+    },
+    "Tour_de_france": {
+      "title": "Tour de France",
+      "text": "Homenaje musical al ciclismo futurista. Kraftwerk ofrece una visión biomecánica del movimiento y la resistencia humana.",
+      "image": "undefined"
+    },
+    "Under_The_Influence": {
+      "title": "Under the Influence",
+      "text": "De ritmo abrasivo y bajos corrosivos, este track aparece tanto en *Surrender* como en *Wip3out*. Su presencia múltiple en la red es un testamento a su fuerza cyberpunk.",
+      "image": "undefined"
+    },
+    "Wip3out": {
+      "title": "Wip3out",
+      "text": "Versión estilizada del tercer juego de la saga. Estética de diseño puro y la introducción de pistas aún más agresivas.",
+      "image": "undefined"
+    },
+    "WipEout": {
+      "title": "WipEout",
+      "text": "El inicio de todo. Juego seminal de 1995 que fusionó diseño gráfico vanguardista con música electrónica de culto. Una leyenda jugable.",
+      "image": "undefined"
+    },
+    "surrender": {
+      "title": "Surrender",
+      "text": "Álbum legendario de Chemical Brothers. Una bomba de energía psicodélica que encuentra su lugar natural entre naves y autopistas de neón.",
+      "image": "undefined"
+    }
+  },
+  "topics": {
+    "Chemical_Brothers": {
+      "title": "Chemical Brothers",
+      "description": "Dúo británico pionero del big beat, cuyo sonido definió gran parte de la estética electrónica de los 90. Su energía cruda y psicodélica fue una influencia clave en los soundtracks de WipEout, fusionando rave con ciencia ficción."
+    },
+    "CoLD_SToRAGE": {
+      "title": "CoLD SToRAGE",
+      "description": "Alias de Tim Wright, compositor detrás del inolvidable soundtrack del WipEout original. Su estilo definió la identidad sonora de la franquicia."
+    },
+    "Kraftwerk": {
+      "title": "Kraftwerk",
+      "description": "Pioneros del tecno, visionarios sonoros alemanes que convirtieron la tecnología en poesía musical. Su influencia reverbera en cada pista de alta velocidad."
+    },
+    "Wipeout_soundtracks": {
+      "title": "Wipeout Soundtraks",
+      "description": "Una selección curada de electrónica de vanguardia diseñada para carreras de anti-gravedad. Más que música, una experiencia cinética y sensorial."
+    },
+    "__All": {
+      "title": "WipEout: sus sountracks y la vanguardia electrónica",
+      "description": "Desde el primer juego creado en 1995, WipEout no solo se convirtió en un sinónimo de velocidad y jugabilidad frenética, sino en un atractor de músicos vanguardistas que crearon temas para ambientar el mundo acelerado de las carreras anti-gravedad.\n\nEn esta curatoría semántica, encontraras todo lo que necesitas saber sobre dos grandes albumes relacionados con el primer juego de 1995 y el tercero de 1999, como también de los artistas que inspiraron varias de sus pistas, desde Kraftwerk hasta Cold SToRAGE, de los que verás información de sus albumes relacionados y sus pistas de las que podras explorar aquellas exlusivas a cada album como aquellas comunes a los albumes de wipEout."
+    }
+  },
+  "all": {
+    "title": "WipEout: sus sountracks y la vanguardia electrónica",
+    "description": "Desde el primer juego creado en 1995, WipEout no solo se convirtió en un sinónimo de velocidad y jugabilidad frenética, sino en un atractor de músicos vanguardistas que crearon temas para ambientar el mundo acelerado de las carreras anti-gravedad.\n\nEn esta curatoría semántica, encontraras todo lo que necesitas saber sobre dos grandes albumes relacionados con el primer juego de 1995 y el tercero de 1999, como también de los artistas que inspiraron varias de sus pistas, desde Kraftwerk hasta Cold SToRAGE, de los que verás información de sus albumes relacionados y sus pistas de las que podras explorar aquellas exlusivas a cada album como aquellas comunes a los albumes de wipEout."
+  }
+}

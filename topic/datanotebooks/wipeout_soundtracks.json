@@ -1,0 +1,124 @@
+{
+  "name": "Samy",
+  "expression": "surrender :::: Chemical_Brothers * (Musique_Response + Under_The_Influence + Out_of_Control + Orange_Wedge + Let_Forever_Be + The_Sunshine_Underground + Asslep_from_day) + Tour_de_france :::: Kraftwerk * (Etape1+Etape2+CaeboHydroProtein+AeroDinamik) +Wip3out :::: Wipeout_soundtracks * (Under_The_Influence + AeroDinamik) + Exit_Planet_Dust :::: Chemical_Brothers * (Sound_of_the_siren + Chemical_Beats + Life_i_sweet) + WipEout :::: Wipeout_soundtracks * (Cairodrome + Cardinal_dancer + Cold_comfort + DOH_T + Chemical_Beats) + Slipstream :::: CoLD_SToRAGE * (Cairodrome + Cardinal_dancer + Cold_comfort)",
+  "nodes": {
+    "AeroDinamik": {
+      "title": "add title",
+      "text": ""
+    },
+    "Asslep_from_day": {
+      "title": "add title",
+      "text": ""
+    },
+    "CaeboHydroProtein": {
+      "title": "add title",
+      "text": ""
+    },
+    "Cairodrome": {
+      "title": "add title",
+      "text": ""
+    },
+    "Cardinal_dancer": {
+      "title": "add title",
+      "text": ""
+    },
+    "Chemical_Beats": {
+      "title": "add title",
+      "text": ""
+    },
+    "Cold_comfort": {
+      "title": "add title",
+      "text": ""
+    },
+    "DOH_T": {
+      "title": "add title",
+      "text": ""
+    },
+    "Etape1": {
+      "title": "add title",
+      "text": ""
+    },
+    "Etape2": {
+      "title": "add title",
+      "text": ""
+    },
+    "Exit_Planet_Dust": {
+      "title": "add title",
+      "text": ""
+    },
+    "Let_Forever_Be": {
+      "title": "add title",
+      "text": ""
+    },
+    "Life_i_sweet": {
+      "title": "add title",
+      "text": ""
+    },
+    "Musique_Response": {
+      "title": "add title",
+      "text": ""
+    },
+    "Orange_Wedge": {
+      "title": "add title",
+      "text": ""
+    },
+    "Out_of_Control": {
+      "title": "add title",
+      "text": ""
+    },
+    "Slipstream": {
+      "title": "add title",
+      "text": ""
+    },
+    "Sound_of_the_siren": {
+      "title": "add title",
+      "text": ""
+    },
+    "The_Sunshine_Underground": {
+      "title": "add title",
+      "text": ""
+    },
+    "Tour_de_france": {
+      "title": "add title",
+      "text": ""
+    },
+    "Under_The_Influence": {
+      "title": "add title",
+      "text": ""
+    },
+    "Wip3out": {
+      "title": "add title",
+      "text": ""
+    },
+    "WipEout": {
+      "title": "add title",
+      "text": ""
+    },
+    "surrender": {
+      "title": "add title",
+      "text": ""
+    }
+  },
+  "topics": {
+    "Chemical_Brothers": {
+      "title": "add title",
+      "description": ""
+    },
+    "CoLD_SToRAGE": {
+      "title": "add title",
+      "description": ""
+    },
+    "Kraftwerk": {
+      "title": "add title",
+      "description": ""
+    },
+    "Wipeout_soundtracks": {
+      "title": "add title",
+      "description": ""
+    }
+  },
+  "all": {
+    "title": "Zigrafi, tu bloc de notas semántico",
+    "description": "Empieza creando un grafo o cargando uno."
+  }
+}

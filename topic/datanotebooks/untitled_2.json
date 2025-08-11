@@ -1,0 +1,76 @@
+{
+  "name": "untitled_2",
+  "expression": "new_products :::: all_products * (car\n+ boat\n+ dishwasher\n+ vacumcleaner\n+ robot\n+ droid)\n+ driving_products :::: vehicles * (car\n+ boat\n+ plain)\n+ robot_products :::: robots * (robot\n+ droid)\n+ droid * talkMachine\n+ house_machines :::: house * (dishwasher\n+ vacumcleaner)",
+  "nodes": {
+    "boat": {
+      "title": "add title",
+      "text": ""
+    },
+    "car": {
+      "title": "add title",
+      "text": ""
+    },
+    "dishwasher": {
+      "title": "add title",
+      "text": ""
+    },
+    "driving_products": {
+      "title": "add title",
+      "text": ""
+    },
+    "droid": {
+      "title": "add title",
+      "text": ""
+    },
+    "house_machines": {
+      "title": "add title",
+      "text": ""
+    },
+    "new_products": {
+      "title": "add title",
+      "text": ""
+    },
+    "plain": {
+      "title": "add title",
+      "text": ""
+    },
+    "robot": {
+      "title": "add title",
+      "text": ""
+    },
+    "robot_products": {
+      "title": "add title",
+      "text": ""
+    },
+    "talkMachine": {
+      "title": "add title",
+      "text": ""
+    },
+    "vacumcleaner": {
+      "title": "add title",
+      "text": ""
+    }
+  },
+  "topics": {
+    "all_products": {
+      "title": "add title",
+      "description": ""
+    },
+    "house": {
+      "title": "add title",
+      "description": ""
+    },
+    "robots": {
+      "title": "add title",
+      "description": ""
+    },
+    "vehicles": {
+      "title": "add title",
+      "description": ""
+    }
+  },
+  "all": {
+    "title": "Zigrafi, tu bloc de notas semántico",
+    "description": "Empieza creando un grafo o cargando uno."
+  }
+}

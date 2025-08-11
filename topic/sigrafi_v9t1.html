@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Zigrafi v8 — Editor Semántico</title>
+  <style>
+    body { font-family: sans-serif; display: flex; height: 100vh; margin: 0; }
+    #left-panel, #right-panel { width: 20%; padding: 10px; overflow-y: auto; }
+    #main-panel { flex-grow: 1; padding: 10px; background: #fdfdfd; position: relative; }
+    #graph-container { width: 100%; height: 80vh; }
+    #file-controls { margin-top: 10px; }
+    button { margin: 5px 0; padding: 6px 10px; }
+    textarea, input { width: 100%; margin-top: 5px; }
+    h3 { margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+  <div id="left-panel">
+    <h3>Datos Generales</h3>
+    <input type="text" id="todo-title" placeholder="Título general">
+    <textarea id="todo-text" rows="4" placeholder="Texto general..."></textarea>
+    <h3>Nodos</h3>
+    <button onclick="prevNode()">←</button>
+    <button onclick="nextNode()">→</button>
+    <input type="text" id="node-title" placeholder="Título del nodo">
+    <textarea id="node-text" rows="4" placeholder="Texto del nodo..."></textarea>
+    <h3>Topicos</h3>
+    <button onclick="prevTopic()">←</button>
+    <button onclick="nextTopic()">→</button>
+    <input type="text" id="topic-title" placeholder="Título del tópico">
+    <textarea id="topic-text" rows="4" placeholder="Texto del tópico..."></textarea>
+    <button onclick="saveJSON()">Guardar Libreta</button>
+    <input type="file" id="fileInput" onchange="loadJSON(event)">
+  </div>
+  <div id="main-panel">
+    <h2 id="libreta-name">Samy (libreta de bienvenida)</h2>
+    <div>
+      <label>Expresión ZykovLang:</label>
+      <textarea id="graph-expression" rows="3"></textarea>
+    </div>
+    <div id="graph-container"></div>
+  </div>
+  <div id="right-panel">
+    <p>Editor de grafos semánticos interactivo con navegación entre nodos y tópicos.</p>
+  </div>
+
+  <script>
+    let jsonData = {
+      expression: "crearGrafo :::: theme * (cargarGrafo + tuPrimerGrafo) + tuPrimerGrafo :::: topic * (crearGrafo + cargarGrafo + LoQuePuedesHacer) + LoQuePuedesHacer*crearGrafo*cargarGrafo",
+      nodeData: {
+        crearGrafo: { title: "Crear tu primer grafo", text: "Puedes usar la expresión de ejemplo y luego presionar 'Evaluar'." },
+        cargarGrafo: { title: "Cargar libreta previa", text: "Presiona el botón 'Cargar' y selecciona una libreta en formato .json" },
+        tuPrimerGrafo: { title: "Tu primer grafo semántico", text: "La expresión crea 4 nodos y 4 relaciones con topicos." },
+        LoQuePuedesHacer: { title: "Explorar y editar", text: "Haz clic en un nodo para editarlo o agregar contenido visual." }
+      },
+      topicData: {
+        theme: { title: "Tema de entrada", text: "Representa el tema principal de tu grafo actual." },
+        topic: { title: "Tópico especial", text: "Agrupa varios nodos para filtrar y navegar por contenido." }
+      },
+      todoData: { title: "Bienvenida", text: "Bienvenido a Zigrafi. Este grafo introductorio te muestra lo que puedes hacer." }
+    };
+
+    let nodeKeys = Object.keys(jsonData.nodeData);
+    let topicKeys = Object.keys(jsonData.topicData);
+    let currentNodeIndex = 0;
+    let currentTopicIndex = 0;
+
+    function updateNodeFields() {
+      const key = nodeKeys[currentNodeIndex];
+      document.getElementById("node-title").value = jsonData.nodeData[key].title;
+      document.getElementById("node-text").value = jsonData.nodeData[key].text;
+    }
+
+    function updateTopicFields() {
+      const key = topicKeys[currentTopicIndex];
+      document.getElementById("topic-title").value = jsonData.topicData[key].title;
+      document.getElementById("topic-text").value = jsonData.topicData[key].text;
+    }
+
+    function nextNode() {
+      saveNodeEdit();
+      currentNodeIndex = (currentNodeIndex + 1) % nodeKeys.length;
+      updateNodeFields();
+    }
+
+    function prevNode() {
+      saveNodeEdit();
+      currentNodeIndex = (currentNodeIndex - 1 + nodeKeys.length) % nodeKeys.length;
+      updateNodeFields();
+    }
+
+    function nextTopic() {
+      saveTopicEdit();
+      currentTopicIndex = (currentTopicIndex + 1) % topicKeys.length;
+      updateTopicFields();
+    }
+
+    function prevTopic() {
+      saveTopicEdit();
+      currentTopicIndex = (currentTopicIndex - 1 + topicKeys.length) % topicKeys.length;
+      updateTopicFields();
+    }
+
+    function saveNodeEdit() {
+      const key = nodeKeys[currentNodeIndex];
+      jsonData.nodeData[key].title = document.getElementById("node-title").value;
+      jsonData.nodeData[key].text = document.getElementById("node-text").value;
+    }
+
+    function saveTopicEdit() {
+      const key = topicKeys[currentTopicIndex];
+      jsonData.topicData[key].title = document.getElementById("topic-title").value;
+      jsonData.topicData[key].text = document.getElementById("topic-text").value;
+    }
+
+    function saveJSON() {
+      saveNodeEdit();
+      saveTopicEdit();
+      jsonData.expression = document.getElementById("graph-expression").value;
+      jsonData.todoData.title = document.getElementById("todo-title").value;
+      jsonData.todoData.text = document.getElementById("todo-text").value;
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "mi_libreta_zygrafi.json";
+      a.click();
+    }
+
+    function loadJSON(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = e => {
+        jsonData = JSON.parse(e.target.result);
+        nodeKeys = Object.keys(jsonData.nodeData);
+        topicKeys = Object.keys(jsonData.topicData);
+        currentNodeIndex = 0;
+        currentTopicIndex = 0;
+        document.getElementById("graph-expression").value = jsonData.expression || "";
+        document.getElementById("todo-title").value = jsonData.todoData?.title || "";
+        document.getElementById("todo-text").value = jsonData.todoData?.text || "";
+        updateNodeFields();
+        updateTopicFields();
+        document.getElementById("libreta-name").textContent = file.name;
+      };
+      reader.readAsText(file);
+    }
+
+    window.onload = () => {
+      document.getElementById("graph-expression").value = jsonData.expression;
+      document.getElementById("todo-title").value = jsonData.todoData.title;
+      document.getElementById("todo-text").value = jsonData.todoData.text;
+      updateNodeFields();
+      updateTopicFields();
+    }
+  </script>
+</body>
+</html>

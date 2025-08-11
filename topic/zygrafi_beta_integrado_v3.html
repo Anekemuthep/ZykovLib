@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zygrafi Beta Integrado — Editor + Navegación + FS</title>
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+    .main-container { display: flex; flex-direction: row; width: 100%; height: 100vh; }
+    #graph-area { flex-grow: 1; display: flex; flex-direction: column; height: 100%; }
+    #controls { padding: 0.4em 0.6em 0 0.6em; background: #eaeaea; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; }
+    #expr-container { display: flex; align-items: center; gap: 1em; padding-top: 2px; }
+    #expr { padding: 0.5em; width: 350px; font-size: 16px; position: relative; top: 2px; }
+    #controls button, #controls select { padding: 0.5em 1em; font-size: 14px; position: relative; top: 2px; }
+    #graph-container { flex-grow: 1; height: 100%; padding: 0 0 30px 40px; box-sizing: border-box; }
+    #right-panel { width: 30vw; height: 100%; background: #f4f4f4; border-left: 1px solid #ccc; padding: 1em; box-sizing: border-box; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .dropdown { position: relative; display: flex; flex-direction: column; }
+    .dropdown-content { display: none; position: absolute; background-color: white; min-width: 160px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2); z-index: 1; }
+    .dropdown-content button { width: 100%; padding: 8px 12px; text-align: left; border: none; background: none; cursor: pointer; font-weight: bold; }
+    .dropdown:hover .dropdown-content { display: block; }
+    input[type="text"], textarea { margin-top: 5px; margin-bottom: 15px; padding: 5px; font-size: 14px; width: 100%; box-sizing: border-box; }
+    button.save-btn { padding: 8px 12px; font-size: 14px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+    #navigator-view { display: none; }
+    .mode-toggle { position: absolute; top: 100px; left: 5px; display: flex; flex-direction: column; gap: 4px; }
+    .mode-toggle button { writing-mode: vertical-rl; transform: rotate(180deg); background-color: #ddd; border: 1px solid #aaa; padding: 4px; font-weight: bold; cursor: pointer; }
+    .navigator-section { padding: 1em; }
+    #navigator-topic-line { display: none; }
+    #nav-btn.active, #edit-btn.active { background-color: black; color: white; font-weight: bold; border: 2px solid black; }
+    #nav-btn, #edit-btn { background-color: white; color: black; border: 2px solid black; padding: 4px 10px; margin-bottom: 5px; cursor: pointer; }
+
+    /* Botonera FS vertical en editor */
+    .fs-vertical {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .fs-vertical button {
+      padding: 6px 10px;
+      background: #111; color: #fff; border: 1px solid #000;
+      cursor: pointer; border-radius: 4px; text-align: left;
+    }
+    .hint { font-size: 12px; color: #666; }
+
+    /* Modal simple para cargar desde carpeta */
+    .modal-backdrop { display:none; position:fixed; inset:0; background: rgba(0,0,0,0.35); align-items:center; justify-content:center; z-index: 9999; }
+    .modal { background:#fff; padding:16px; border-radius:8px; min-width:360px; max-width: 90vw; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+    .modal h4 { margin: 0 0 10px 0; }
+    .modal .row { display:flex; gap:8px; margin-top:10px; }
+    .modal .row button { flex:1; padding:8px; }
+  </style>
+</head>
+<body>
+  <div class="mode-toggle">
+    <button id="nav-btn" onclick="setMode('editor')">Editor</button>
+    <button id="edit-btn" onclick="setMode('navigator')">Navegador</button>
+  </div>
+  <div class="main-container">
+    <div id="graph-area">
+      <div id="controls">
+        <div id="expr-container" style="display: flex; align-items: center; gap: 1em;">
+          <div id="zykgreeting" style="font-size: 18px; font-weight: bold;">Zygrafi, tu bloc de notas semántico</div>
+          <!-- 🔒 Filtro por tópico: visible SOLO en modo "navegador" -->
+          <div id="filterBox" style="display:flex; align-items:center; gap:8px;">
+            <label for="dropdown-btn" style="font-weight: bold;">Filtrar por tópico:</label>
+            <div class="dropdown">
+              <button id="dropdown-btn">Todos</button>
+              <div id="dropdown-menu" class="dropdown-content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="graph-container"></div>
+    </div>
+    <div id="right-panel">
+      <div id="editor-view">
+        <div id="graph-expression-editor" style="margin-bottom: 15px;">
+          <label style="font-weight: bold;">Expresión del grafo:</label><br>
+          <textarea id="expr" rows="3" style="width: 100%; margin-top: 5px; font-size: 14px;">A :::: theme * (B + C) + D :::: topic * (viva + laVida + loca + B) + B*oreo*res</textarea>
+          <button onclick="loadGraph()" style="margin-top: 5px;">Renderizar grafo</button>
+        </div>
+
+        <!-- 🔽 Selector rápido de NODO/TÓPICO para edición (estilo dataNotebook v10) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 12px;">
+          <div>
+            <label style="font-weight:bold;">Elegir nodo para editar</label>
+            <select id="editor-node-select" style="width:100%; padding:6px;">
+              <option value="">(selecciona un nodo)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-weight:bold;">Elegir tópico para editar</label>
+            <select id="editor-topic-select" style="width:100%; padding:6px;">
+              <option value="">(selecciona un tópico)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 🔧 Botonera FS vertical (solo 3 botones de dataNotebook) + crear curatoria -->
+        <div style="margin: 8px 0;">
+          <h3 style="margin:4px 0;">Libretas</h3>
+          <div class="fs-vertical">
+            <button onclick="createCuratoria()">Crear curatoria (HTML)</button>
+            <button onclick="pickDatanotebooksDir()">Elegir carpeta (File System)</button>
+            <button onclick="saveToFS()">Guardar en carpeta</button>
+            <button onclick="openFsLoadModal()">Cargar desde carpeta</button>
+          </div>
+          <span id="fsStatus" class="hint"></span>
+        </div>
+
+        <hr />
+        <h3 id="node-title">Editor de nodo</h3>
+        <p><em>Haz clic en un nodo para editar sus datos.</em></p>
+        <div id="node-editor"></div>
+        <hr />
+        <h3 id="topic-title">Editor de tópico</h3>
+        <p id="current-topic-name" style="font-weight: bold; color: #333; margin-top: -10px; margin-bottom: 10px;"></p>
+        <div id="topic-editor">
+          <input id="topic-name" type="text" placeholder="Título del tópico">
+          <textarea id="topic-description" placeholder="Descripción del tópico..."></textarea>
+          <button class="save-btn" onclick="saveTopicInfo()">Guardar Tópico</button>
+        </div>
+        <hr />
+        <h3>Editor general</h3>
+        <p style="font-weight: bold; color: #333; margin-top: -10px; margin-bottom: 10px;">Información general de la red</p>
+        <div id="all-editor">
+          <input id="all-title" type="text" placeholder="Título general de la red">
+          <textarea id="all-description" placeholder="Descripción general del grafo..."></textarea>
+          <button class="save-btn" onclick="saveAllInfo()">Guardar Información General</button>
+        </div>
+      </div>
+
+      <div id="navigator-view" style="display: none;">
+        <div class="navigator-section">
+          <h2 id="navigator-title">Zigrafi, tu editor semántico</h2>
+          <p id="navigator-topic-line"><strong>Tópico:</strong> <span id="navigator-topic-name">Todos</span></p>
+          <h4 id="navigator-topic-title"></h4>
+          <p id="navigator-topic-description"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para cargar archivos desde carpeta FS -->
+  <div id="fsLoadModal" class="modal-backdrop">
+    <div class="modal">
+      <h4>Archivos en carpeta datanotebooks</h4>
+      <select id="fsFileSelect" size="8" style="width:100%"></select>
+      <div class="row">
+        <button onclick="loadFromFS()">Cargar archivo</button>
+        <button onclick="closeFsLoadModal()">Cancelar</button>
+      </div>
+      <div class="hint" style="margin-top:8px;">
+        Si no ves tu carpeta, pulsa “Elegir carpeta (File System)” y selecciona tu ruta de <em>datanotebooks</em>.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ================== Estado base ==================
+    let topicColorMap = {};
+    let fullGraph = { nodes: [], edges: [] };
+    let entryData = JSON.parse(localStorage.getItem("entryData") || "{}");
+    let entryTopic = JSON.parse(localStorage.getItem("entryTopic") || "{}");
+    let currentMode = 'editor';
+    let selectedNodeId = null;
+
+    // ================== Grafo (igual a v8 con mejoras) ==================
+    async function loadGraph() {
+      const expression = document.getElementById("expr").value;
+      try {
+        const response = await fetch("http://localhost:8080/eval", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expression })
+        });
+        const data = await response.json();
+        fullGraph = buildGraph(data.nodes, data.edges);
+        populateCategoryDropdown(data.nodes);
+        renderGraph(fullGraph);
+        populateEditorDropdowns();
+        bindEditorDropdownEvents();
+        onCategoryChange("all");
+      } catch (err) {
+        alert("Error al cargar el grafo. Revisa la consola.");
+        console.error(err);
+      }
+    }
+
+    function buildGraph(nodes, edges) {
+      const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+      const categories = Array.from(new Set(nodes.map(n => n.category || "entry")));
+      const topicColors = {};
+      categories.forEach((cat, i) => {
+        topicColors[cat] = (cat === "entry") ? "#8C92AC" : darkenColor(palette[i % palette.length], 0.7);
+      });
+      topicColorMap = topicColors;
+
+      return {
+        nodes: nodes.map((n, i) => {
+          const isEntry = (n.category || "entry") === "entry";
+          const color = isEntry ? "#343434" : topicColors[n.category];
+          const labelColor = isEntry ? "#343434" : topicColors[n.category];
+          const radiusFactor = Math.min(3, Math.log(nodes.length + 5));
+          return {
+            id: n.nodeId,
+            label: entryData[n.nodeId]?.title || n.nodeId,
+            x: Math.cos(i * 2 * Math.PI / nodes.length) * radiusFactor,
+            y: Math.sin(i * 2 * Math.PI / nodes.length) * radiusFactor,
+            size: isEntry ? 1.5 : 5.5,
+            color,
+            labelColor,
+            category: n.category || "entry",
+            font: isEntry ? "Inconsolata" : "Orbitron",
+            labelSize: isEntry ? 10 : 14
+          };
+        }),
+        edges: edges.map(([s, t], i) => ({ id: "e" + i, source: s, target: t, color: "#ccc" }))
+      };
+    }
+
+    function renderGraph(graph) {
+      const container = document.getElementById("graph-container");
+      container.innerHTML = "";
+
+      const updatedGraph = {
+        nodes: graph.nodes.map(n => ({ ...n, color: (n.id === selectedNodeId) ? "#bbb" : n.color })),
+        edges: graph.edges
+      };
+
+      const s = new sigma({ graph: updatedGraph, container });
+      s.camera.goTo({ x: 0, y: 0, ratio: 1.1 });
+      s.settings({ labelSize: 'fixed', defaultLabelSize: 14, defaultLabelColor: "#000", labelColor: "node", defaultLabelFont: "sans-serif" });
+
+      sigma.canvas.labels.def = function(node, context, settings) {
+        const prefix = settings('prefix') || '';
+        const size = node.labelSize || settings('defaultLabelSize');
+        const font = node.font || settings('defaultLabelFont');
+        context.font = size + "px " + font;
+        context.fillStyle = node.labelColor || settings('defaultLabelColor');
+        context.textAlign = 'center';
+        context.fillText(node.label, node[prefix + 'x'], node[prefix + 'y'] + size + 2);
+      };
+
+      s.bind("clickNode", function(e) {
+        const nodeId = e.data.node.id;
+        selectedNodeId = nodeId;
+        renderGraph(graph);
+        if (currentMode === 'editor') {
+          showNodeEditor(nodeId);
+        } else if (currentMode === 'navigator') {
+          showNavigatorNodeInfo(nodeId);
+        }
+      });
+    }
+
+    function populateCategoryDropdown(nodes) {
+      const menu = document.getElementById("dropdown-menu");
+      const categories = Array.from(new Set(nodes.map(n => n.category || "entry")));
+      menu.innerHTML = "";
+
+      const allButton = document.createElement("button");
+      allButton.textContent = "Todos";
+      allButton.style.backgroundColor = "#8C92AC";
+      allButton.style.color = isDarkColor("#8C92AC") ? "#fff" : "#000";
+      allButton.onclick = () => onCategoryChange("all");
+      menu.appendChild(allButton);
+
+      categories.filter(cat => cat !== "entry").forEach((cat) => {
+        const color = topicColorMap[cat] || "#ccc";
+        const textColor = isDarkColor(color) ? "#fff" : "#000";
+        const button = document.createElement("button");
+        button.textContent = cat;
+        button.style.backgroundColor = color;
+        button.style.color = textColor;
+        button.onclick = () => onCategoryChange(cat);
+        menu.appendChild(button);
+      });
+    }
+
+    function onCategoryChange(category) {
+      const dropdownBtn = document.getElementById("dropdown-btn");
+      const categories = Array.from(new Set(fullGraph.nodes.map(n => n.category || "entry")));
+      const color = getCategoryColor(category === "all" ? "entry" : category, categories);
+      const textColor = isDarkColor(color) ? "#fff" : "#000";
+
+      dropdownBtn.textContent = (category === "all" ? "Todos" : category);
+      dropdownBtn.style.backgroundColor = color;
+      dropdownBtn.style.color = textColor;
+
+      if (category === "all") {
+        renderGraph(fullGraph);
+      } else {
+        const filteredNodes = fullGraph.nodes.filter(n =>
+          n.category === category ||
+          fullGraph.edges.some(e =>
+            (e.source === n.id && fullGraph.nodes.find(nn => nn.id === e.target)?.category === category) ||
+            (e.target === n.id && fullGraph.nodes.find(nn => nn.id === e.source)?.category === category)
+          )
+        );
+        const nodeIds = new Set(filteredNodes.map(n => n.id));
+        const filteredEdges = fullGraph.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+        renderGraph({ nodes: filteredNodes, edges: filteredEdges });
+      }
+
+      if (currentMode === "navigator") loadNavigatorView();
+      if (selectedNodeId) {
+        const found = fullGraph.nodes.find(n => n.id === selectedNodeId);
+        if (!found) selectedNodeId = null;
+      }
+    }
+
+    function getCategoryColor(cat, categories) {
+      const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+      const index = categories.indexOf(cat);
+      return (cat === "entry") ? "#8C92AC" : darkenColor(palette[index % palette.length], 0.7);
+    }
+    function isDarkColor(hex) {
+      const r = parseInt(hex.substr(1, 2), 16);
+      const g = parseInt(hex.substr(3, 2), 16);
+      const b = parseInt(hex.substr(5, 2), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      return brightness < 128;
+    }
+    function darkenColor(hex, factor = 0.7) {
+      const r = Math.floor(parseInt(hex.substr(1, 2), 16) * factor);
+      const g = Math.floor(parseInt(hex.substr(3, 2), 16) * factor);
+      const b = Math.floor(parseInt(hex.substr(5, 2), 16) * factor);
+      return "#" + r.toString(16).padStart(2, "0") + g.toString(16).padStart(2, "0") + b.toString(16, "0");
+    }
+
+    // ================== Dropdowns Editor (nodo/tópico) ==================
+    function populateEditorDropdowns() {
+      // Nodos
+      const nodeSel = document.getElementById('editor-node-select');
+      if (nodeSel) {
+        const items = [...fullGraph.nodes].sort((a,b) =>
+          (entryData[a.id]?.title || a.label || a.id).localeCompare(entryData[b.id]?.title || b.label || b.id, 'es', {numeric:true})
+        );
+        const opts = ['<option value="">(selecciona un nodo)</option>']
+          .concat(items.map(n => {
+            const label = entryData[n.id]?.title || n.label || n.id;
+            return `<option value="${n.id}">${label} — [${n.id}]</option>`;
+          }));
+        nodeSel.innerHTML = opts.join('');
+      }
+
+      // Tópicos (a partir de categorías del grafo, excepto 'entry')
+      const topicSel = document.getElementById('editor-topic-select');
+      if (topicSel) {
+        const topics = Array.from(new Set(fullGraph.nodes.map(n => n.category || "entry")))
+          .filter(t => t !== 'entry')
+          .sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));
+        const opts = ['<option value="">(selecciona un tópico)</option>']
+          .concat(topics.map(t => `<option value="${t}">${t}</option>`));
+        topicSel.innerHTML = opts.join('');
+      }
+    }
+
+    function bindEditorDropdownEvents() {
+      const nodeSel = document.getElementById('editor-node-select');
+      if (nodeSel) {
+        nodeSel.onchange = (e) => {
+          const id = e.target.value;
+          if (id) {
+            selectedNodeId = id;
+            renderGraph(fullGraph);
+            showNodeEditor(id);
+          }
+        };
+      }
+      const topicSel = document.getElementById('editor-topic-select');
+      if (topicSel) {
+        topicSel.onchange = (e) => {
+          const topic = e.target.value;
+          if (!topic) return;
+          const key = topic;
+          const data = entryTopic[key] || { title:"", description:"" };
+          document.getElementById('topic-name').value = data.title || "";
+          document.getElementById('topic-description').value = data.description || "";
+          document.getElementById('current-topic-name').textContent = key;
+        };
+      }
+    }
+
+    // ================== Paneles ==================
+    function showNodeEditor(nodeId) {
+      document.getElementById("node-title").textContent = "Editor de nodo " + nodeId;
+      const editor = document.getElementById("node-editor");
+      const data = entryData[nodeId] || { title: "", text: "", image: "" };
+      editor.innerHTML = `
+        <label>Título:</label>
+        <input type="text" id="titleInput" value="${data.title}" />
+        <label>Texto:</label>
+        <textarea id="textInput" rows="6">${data.text}</textarea>
+        <label>Ruta de imagen:</label>
+        <input type="text" id="imageInput" value="${data.image}" />
+        <button class="save-btn" onclick="saveNodeData('${nodeId}')">Guardar</button>
+        <div style="margin-top:10px;">
+          <strong>Preview:</strong><br>
+          <img src="${data.image}" style="width:100%; max-height:300px; object-fit:contain; margin-top:5px;">
+        </div>
+      `;
+    }
+
+    function saveNodeData(nodeId) {
+      const title = document.getElementById("titleInput").value;
+      const text = document.getElementById("textInput").value;
+      const image = document.getElementById("imageInput").value;
+      entryData[nodeId] = { title, text, image };
+      localStorage.setItem("entryData", JSON.stringify(entryData));
+      alert("Datos guardados para " + nodeId);
+    }
+
+    function saveTopicInfo() {
+      const selected = document.getElementById('editor-topic-select')?.value || "";
+      const key = selected || (document.getElementById('dropdown-btn')?.textContent?.trim() === "Todos" ? "__All" : document.getElementById('dropdown-btn')?.textContent?.trim());
+      const title = document.getElementById("topic-name").value;
+      const description = document.getElementById("topic-description").value;
+      const data = entryTopic[key] || {};
+      entryTopic[key] = { ...data, title, description };
+      localStorage.setItem("entryTopic", JSON.stringify(entryTopic));
+      alert("Tópico guardado: " + key);
+    }
+
+    function saveAllInfo() {
+      const title = document.getElementById("all-title").value;
+      const description = document.getElementById("all-description").value;
+      entryTopic["__All"] = { title, description };
+      localStorage.setItem("entryTopic", JSON.stringify(entryTopic));
+      alert("Información general guardada.");
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      const editor = document.getElementById('editor-view');
+      const navigator = document.getElementById('navigator-view');
+      const navBtn = document.getElementById('nav-btn');
+      const editBtn = document.getElementById('edit-btn');
+      const filterBox = document.getElementById('filterBox');
+
+      if (mode === 'navigator') {
+        editor.style.display = 'none';
+        navigator.style.display = 'block';
+        document.getElementById('graph-expression-editor').style.display = 'none';
+        filterBox.style.display = 'flex';            // ✅ filtro visible en navegador
+        navBtn.classList.add("active");
+        editBtn.classList.remove("active");
+        loadNavigatorView();
+      } else {
+        editor.style.display = 'block';
+        navigator.style.display = 'none';
+        document.getElementById('graph-expression-editor').style.display = 'block';
+        filterBox.style.display = 'none';            // ✅ filtro oculto en editor
+        editBtn.classList.add("active");
+        navBtn.classList.remove("active");
+        populateEditorDropdowns();
+        bindEditorDropdownEvents();
+      }
+    }
+
+    function loadNavigatorView() {
+      const dropdown = document.getElementById('dropdown-btn');
+      const selected = dropdown?.textContent?.trim() || "Todos";
+      const key = (selected === "Todos") ? "__All" : selected;
+      const data = entryTopic[key] || { title: "", description: "" };
+
+      document.getElementById("navigator-title").textContent = data.title || "Zigrafi, tu editor semántico";
+
+      const titleEl = document.getElementById("navigator-title");
+      if (!selected.startsWith("Nodo: ")) {
+        const color = topicColorMap[selected === "Todos" ? "entry" : selected] || "#ccc";
+        const textColor = isDarkColor(color) ? "#fff" : "#000";
+        titleEl.style.backgroundColor = color;
+        titleEl.style.color = textColor;
+        titleEl.style.padding = "6px 10px";
+        titleEl.style.borderRadius = "6px";
+        titleEl.style.display = "inline-block";
+      } else {
+        titleEl.style.backgroundColor = "";
+        titleEl.style.color = "";
+        titleEl.style.padding = "";
+        titleEl.style.borderRadius = "";
+        titleEl.style.display = "";
+      }
+
+      document.getElementById("navigator-topic-title").textContent = "";
+      document.getElementById("navigator-topic-description").innerHTML = `<p>${data.description || "(sin descripción)"}</p>`;
+    }
+
+    function showNavigatorNodeInfo(nodeId) {
+      const data = entryData[nodeId] || { title: "", text: "", image: "" };
+      document.getElementById("navigator-title").textContent = data.title || nodeId;
+      document.getElementById("navigator-topic-name").textContent = "Nodo: " + nodeId;
+      document.getElementById("navigator-topic-title").textContent = "";
+      document.getElementById("navigator-topic-description").innerHTML = `
+        <p>${data.text || "(sin descripción)"}</p>
+        ${data.image ? `<img src="${data.image}" style="max-width:100%; max-height:300px; margin-top:10px;">` : ""}
+      `;
+    }
+
+    // ================== Exportar 'Curatoría' (HTML navegación-only) ==================
+    function createCuratoria() {
+      const name = prompt('Nombre de la curatoría (sin extensión):', 'mi-curatoria');
+      if (name === null) return;
+      const safeName = (name || 'mi-curatoria').trim() || 'mi-curatoria';
+
+      const notebook = getCurrentNotebook();
+      try {
+        localStorage.setItem("entryData", JSON.stringify(entryData));
+        localStorage.setItem("entryTopic", JSON.stringify(entryTopic));
+      } catch(e){}
+
+      const fixedGraph = fullGraph && fullGraph.nodes && fullGraph.edges ? fullGraph : {nodes:[], edges:[]};
+
+      const htmlDoc = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Curatoría — ${escapeHtml(safeName)}</title>
+  <script src="https://cdn.jsdelivr.net/npm/sigma@1.2.1/build/sigma.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; background:#f7f7f7; }
+    .main { display: grid; grid-template-columns: 1fr 360px; grid-template-rows: 56px 1fr; height: 100vh; }
+    header { grid-column: 1 / 3; display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; background:#111; color:#fff; }
+    header .title { font-weight: 700; letter-spacing: .3px; }
+    header .topic-filter { display:flex; align-items:center; gap:8px; }
+    header .dropdown { position: relative; display: inline-block; }
+    header .dropdown-content { display: none; position: absolute; background-color: white; min-width: 160px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2); z-index: 10; }
+    header .dropdown-content button { width: 100%; padding: 8px 12px; text-align: left; border: none; background: none; cursor: pointer; font-weight: bold; }
+    header .dropdown:hover .dropdown-content { display: block; }
+    #graph { background:#fff; }
+    #graph, #side { height: calc(100vh - 56px); }
+    #side { border-left: 1px solid #ddd; padding: 12px; overflow:auto; background:#fafafa; }
+    h2.badge { display:inline-block; padding:6px 10px; border-radius: 8px; }
+    img.resp { max-width: 100%; max-height: 320px; display:block; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <header>
+      <div class="title">Curatoría — ${escapeHtml(safeName)}</div>
+      <div class="topic-filter">
+        <label><strong>Filtrar por tópico:</strong></label>
+        <div class="dropdown">
+          <button id="dropdown-btn">Todos</button>
+          <div id="dropdown-menu" class="dropdown-content"></div>
+        </div>
+      </div>
+    </header>
+    <div id="graph"></div>
+    <aside id="side">
+      <h2 id="nav-title" class="badge">Museo personal</h2>
+      <p id="nav-sub"></p>
+      <div id="nav-content"></div>
+    </aside>
+  </div>
+
+  <script id="notebookData" type="application/json">${escapeForScript(JSON.stringify({
+        name: safeName,
+        notebook,
+        entryData,
+        entryTopic,
+        graph: fixedGraph
+      }))}</script>
+  <script>
+    const data = JSON.parse(document.getElementById('notebookData').textContent);
+    const entryData = data.entryData || {};
+    const entryTopic = data.entryTopic || {};
+    let graph = data.graph || {nodes:[], edges:[]};
+    let selectedNodeId = null;
+    let topicColorMap = {};
+
+    function isDarkColor(hex) {
+      if (!/^#([0-9a-fA-F]{6})$/.test(hex)) return false;
+      const r = parseInt(hex.substr(1,2),16);
+      const g = parseInt(hex.substr(3,2),16);
+      const b = parseInt(hex.substr(5,2),16);
+      const brightness = (r*299 + g*587 + b*114)/1000;
+      return brightness < 128;
+    }
+    function darkenColor(hex, factor = 0.7) {
+      if (!/^#([0-9a-fA-F]{6})$/.test(hex)) return '#999';
+      const r = Math.floor(parseInt(hex.substr(1,2),16)*factor);
+      const g = Math.floor(parseInt(hex.substr(3,2),16)*factor);
+      const b = Math.floor(parseInt(hex.substr(5,2),16)*factor);
+      return "#"+r.toString(16).padStart(2,"0")+g.toString(16).padStart(2,"0")+b.toString(16).padStart(2,"0");
+    }
+
+    function populateDropdown(nodes) {
+      const menu = document.getElementById("dropdown-menu");
+      const categories = Array.from(new Set(nodes.map(n => n.category || "entry")));
+      const palette = ['#FF00FF','#00FFFF','#C0C0C0','#00FF00','#FF69B4','#FFFF00','#00BFFF','#DDA0DD'];
+      topicColorMap = {};
+      categories.forEach((cat, i) => {
+        topicColorMap[cat] = (cat === "entry") ? "#8C92AC" : darkenColor(palette[i % palette.length], 0.7);
+      });
+
+      menu.innerHTML = "";
+      const allButton = document.createElement("button");
+      allButton.textContent = "Todos";
+      allButton.style.backgroundColor = "#8C92AC";
+      allButton.style.color = isDarkColor("#8C92AC") ? "#fff" : "#000";
+      allButton.onclick = () => onCategoryChange("all");
+      menu.appendChild(allButton);
+
+      categories.filter(c => c !== "entry").forEach((cat) => {
+        const color = topicColorMap[cat] || "#ccc";
+        const textColor = isDarkColor(color) ? "#fff" : "#000";
+        const b = document.createElement("button");
+        b.textContent = cat;
+        b.style.backgroundColor = color;
+        b.style.color = textColor;
+        b.onclick = () => onCategoryChange(cat);
+        menu.appendChild(b);
+      });
+    }
+
+    function render(g) {
+      const container = document.getElementById("graph");
+      container.innerHTML = "";
+      const updated = {
+        nodes: g.nodes.map(n => ({...n, color: (n.id===selectedNodeId) ? "#bbb" : n.color})),
+        edges: g.edges
+      };
+      const s = new sigma({ graph: updated, container });
+      s.camera.goTo({ x: 0, y: 0, ratio: 1.1 });
+      s.settings({ labelSize: 'fixed', defaultLabelSize: 14, defaultLabelColor: "#000", labelColor: "node", defaultLabelFont: "sans-serif" });
+
+      sigma.canvas.labels.def = function(node, context, settings) {
+        const prefix = settings('prefix') || '';
+        const size = node.labelSize || settings('defaultLabelSize');
+        const font = node.font || settings('defaultLabelFont');
+        context.font = size + "px " + font;
+        context.fillStyle = node.labelColor || settings('defaultLabelColor');
+        context.textAlign = 'center';
+        context.fillText(node.label, node[prefix + 'x'], node[prefix + 'y'] + size + 2);
+      };
+
+      s.bind("clickNode", function(e) {
+        const nodeId = e.data.node.id;
+        selectedNodeId = nodeId;
+        render(g);
+        showNode(nodeId);
+      });
+    }
+
+    function onCategoryChange(cat) {
+      const btn = document.getElementById("dropdown-btn");
+      const color = (cat === "all") ? "#8C92AC" : (topicColorMap[cat] || "#ccc");
+      const textColor = isDarkColor(color) ? "#fff" : "#000";
+      btn.textContent = (cat === "all") ? "Todos" : cat;
+      btn.style.backgroundColor = color;
+      btn.style.color = textColor;
+
+      if (cat === "all") return render(graph);
+      const nodes = graph.nodes.filter(n => n.category === cat ||
+        graph.edges.some(e =>
+            (e.source === n.id && graph.nodes.find(nn => nn.id === e.target)?.category === cat) ||
+            (e.target === n.id && graph.nodes.find(nn => nn.id === e.source)?.category === cat)
+        ));
+      const ids = new Set(nodes.map(n => n.id));
+      const edges = graph.edges.filter(e => ids.has(e.source) && ids.has(e.target));
+      render({nodes, edges});
+      loadTopic(cat);
+    }
+
+    function showNode(id) {
+      const data = entryData[id] || { title:"", text:"", image:"" };
+      const titleEl = document.getElementById("nav-title");
+      titleEl.textContent = data.title || id;
+      titleEl.className = "badge";
+      document.getElementById("nav-sub").textContent = "Nodo: " + id;
+      document.getElementById("nav-content").innerHTML = \`
+        <p>\${data.text || "(sin descripción)"}<\/p>
+        \${data.image ? '<img class="resp" src="' + data.image + '">' : ""}
+      \`;
+    }
+
+    function loadTopic(cat) {
+      const data = entryTopic[cat] || { title:"", description:"" };
+      const color = topicColorMap[cat] || "#8C92AC";
+      const textColor = isDarkColor(color) ? "#fff" : "#000";
+      const titleEl = document.getElementById("nav-title");
+      titleEl.textContent = data.title || cat;
+      titleEl.style.backgroundColor = color;
+      titleEl.style.color = textColor;
+      titleEl.className = "badge";
+      document.getElementById("nav-sub").textContent = "Tópico: " + cat;
+      document.getElementById("nav-content").innerHTML = "<p>"+(data.description || "(sin descripción)")+"</p>";
+    }
+
+    // Init Curatoría
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',\"'\":'&#39;'}[c]));
+    }
+    function escapeForScript(s) {
+      return s.replace(/<\/script>/gi, '<\\/script>');
+    }
+
+    // ================== FS Access API (subset de dataNotebook) ==================
+    const FS_DB_NAME = 'zygrafi-fs';
+    const FS_STORE = 'handles';
+    const FS_KEY = 'datanotebooksDir';
+
+    function idbOpen() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(FS_DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(FS_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function idbSet(key, val) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(FS_STORE, 'readwrite');
+        tx.objectStore(FS_STORE).put(val, key);
+        tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function idbGet(key) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(FS_STORE, 'readonly');
+        const req = tx.objectStore(FS_STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function verifyPermission(handle, writable) {
+      const opts = { mode: writable ? 'readwrite' : 'read' };
+      if ((await handle.queryPermission(opts)) === 'granted') return true;
+      if ((await handle.requestPermission(opts)) === 'granted') return true;
+      return false;
+    }
+
+    async function getSavedDirHandle() {
+      try { return await idbGet(FS_KEY); } catch { return null; }
+    }
+
+    async function pickDatanotebooksDir() {
+      if (!('showDirectoryPicker' in window)) {
+        alert('Tu navegador no soporta File System Access API. Usa Chrome/Edge en HTTPS o localhost.');
+        return;
+      }
+      try {
+        const dirHandle = await window.showDirectoryPicker();
+        const ok = await verifyPermission(dirHandle, true);
+        if (!ok) { alert('Permiso denegado.'); return; }
+        await idbSet(FS_KEY, dirHandle);
+        reflectFsStatus('Carpeta vinculada.');
+      } catch (e) { console.warn(e); }
+    }
+
+    async function reflectFsStatus(msg) {
+      const span = document.getElementById('fsStatus');
+      const handle = await getSavedDirHandle();
+      if (!handle) { span.textContent = '(sin carpeta FS)'; return; }
+      span.textContent = msg || '(carpeta FS lista)';
+    }
+
+    async function listFsJsonFiles() {
+      const dirHandle = await getSavedDirHandle();
+      if (!dirHandle) return [];
+      const ok = await verifyPermission(dirHandle, false);
+      if (!ok) return [];
+      const files = [];
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === 'file' && name.toLowerCase().endsWith('.json')) files.push({ name, handle });
+      }
+      files.sort((a,b)=>a.name.localeCompare(b.name,'es',{numeric:true}));
+      return files;
+    }
+
+    function getCurrentNotebook() {
+      const expression = document.getElementById("expr").value || "";
+      const allTitle = document.getElementById("all-title").value || "";
+      const allDesc = document.getElementById("all-description").value || "";
+      const nodes = JSON.parse(localStorage.getItem("entryData") || "{}");
+      const topics = JSON.parse(localStorage.getItem("entryTopic") || "{}");
+      return { name: "", expression, nodes, topics, all: { title: allTitle, description: allDesc } };
+    }
+
+    function applyNotebook(json) {
+      try {
+        const { expression, nodes, topics, all } = json || {};
+        if (expression != null) document.getElementById("expr").value = expression;
+        entryData = nodes || {};
+        entryTopic = topics || {};
+        localStorage.setItem("entryData", JSON.stringify(entryData));
+        localStorage.setItem("entryTopic", JSON.stringify(entryTopic));
+        document.getElementById("all-title").value = all?.title || "";
+        document.getElementById("all-description").value = all?.description || "";
+        loadGraph();
+      } catch (e) {
+        alert("Estructura de libreta inválida.");
+      }
+    }
+
+    async function saveToFS() {
+      const dirHandle = await getSavedDirHandle();
+      if (!dirHandle) { alert('Primero elige la carpeta (File System).'); return; }
+      const ok = await verifyPermission(dirHandle, true);
+      if (!ok) { alert('Sin permiso de escritura en la carpeta.'); return; }
+
+      const s = getCurrentNotebook();
+      let filename = prompt('Nombre de archivo (sin extensión):', 'notebook');
+      if (filename === null) return;
+      filename = filename.trim();
+      if (!filename) { alert('Nombre vacío.'); return; }
+
+      const fileHandle = await dirHandle.getFileHandle(filename + '.json', { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' }));
+      await writable.close();
+      alert(`Guardado en carpeta: ${filename}.json`);
+    }
+
+    function openFsLoadModal() {
+      fillFsList().then(() => {
+        document.getElementById('fsLoadModal').style.display = 'flex';
+      });
+    }
+    function closeFsLoadModal() {
+      document.getElementById('fsLoadModal').style.display = 'none';
+    }
+    async function fillFsList() {
+      const sel = document.getElementById('fsFileSelect');
+      sel.innerHTML = '<option>(cargando...)</option>';
+      const files = await listFsJsonFiles();
+      if (!files.length) { sel.innerHTML = '<option disabled>(no hay .json)</option>'; return; }
+      sel.innerHTML = files.map(f => `<option value="${f.name}">${f.name}</option>`).join('');
+    }
+    async function loadFromFS() {
+      const dirHandle = await getSavedDirHandle();
+      if (!dirHandle) { alert('Primero elige la carpeta (File System).'); return; }
+      const ok = await verifyPermission(dirHandle, false);
+      if (!ok) { alert('Sin permiso de lectura.'); return; }
+      const sel = document.getElementById('fsFileSelect');
+      const name = sel.value;
+      if (!name) return;
+      const fileHandle = await dirHandle.getFileHandle(name);
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      try {
+        const json = JSON.parse(text);
+        applyNotebook(json);
+        closeFsLoadModal();
+      } catch (e) {
+        alert('JSON inválido.');
+      }
+    }
+
+    // ================== Init ==================
+    window.onload = () => {
+      const dropdownBtn = document.getElementById("dropdown-btn");
+      if (!dropdownBtn.textContent.trim()) dropdownBtn.textContent = "Todos";
+      document.getElementById('editor-view').style.display = 'block';
+      document.getElementById('navigator-view').style.display = 'none';
+      document.getElementById('filterBox').style.display = 'none'; // filtro oculto en editor
+      reflectFsStatus();
+      try { loadGraph(); } catch(e) {}
+    };
+  </script>
+</body>
+</html>

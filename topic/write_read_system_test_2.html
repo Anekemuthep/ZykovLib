@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor de texto JSON</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; max-width: 700px; margin: auto; }
+    label { font-weight: bold; display: block; margin-top: 1em; }
+    input, textarea { width: 100%; padding: 0.5em; margin-top: 0.5em; font-size: 1em; }
+    button { margin-top: 1.5em; margin-right: 1em; padding: 0.5em 1em; font-size: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Mini Editor JSON</h1>
+
+  <label for="titleInput">Título</label>
+  <input id="titleInput" type="text" />
+
+  <label for="textInput">Texto</label>
+  <textarea id="textInput" rows="8"></textarea>
+
+  <div>
+    <button onclick="promptSaveJson()">💾 Guardar JSON</button>
+    <button onclick="document.getElementById('fileInput').click()">📂 Cargar JSON</button>
+    <input id="fileInput" type="file" accept=".json" style="display:none" />
+  </div>
+
+  <script>
+    const defaultData = {
+      title: "título aquí",
+      text: "escriba aquí"
+    };
+
+    // Cargar desde localStorage o usar default
+    let jsonData = JSON.parse(localStorage.getItem("welcomeData")) || defaultData;
+
+    const titleInput = document.getElementById("titleInput");
+    const textInput = document.getElementById("textInput");
+
+    // Inicializar campos
+    titleInput.value = jsonData.title;
+    textInput.value = jsonData.text;
+
+    // Actualizar JSON y localStorage
+    function updateJson() {
+      jsonData.title = titleInput.value;
+      jsonData.text = textInput.value;
+      localStorage.setItem("welcomeData", JSON.stringify(jsonData));
+    }
+
+    titleInput.addEventListener("input", updateJson);
+    textInput.addEventListener("input", updateJson);
+
+    // Guardar como archivo
+    function promptSaveJson() {
+      const filename = prompt("Nombre del archivo:", "mi_texto.json");
+      if (!filename) return;
+
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename.endsWith(".json") ? filename : filename + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Cargar archivo JSON
+    document.getElementById("fileInput").addEventListener("change", function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data.title || !data.text) {
+            alert("El archivo debe contener campos 'title' y 'text'.");
+            return;
+          }
+          jsonData = data;
+          localStorage.setItem("welcomeData", JSON.stringify(jsonData));
+          titleInput.value = jsonData.title;
+          textInput.value = jsonData.text;
+        } catch (err) {
+          alert("Error al leer el archivo JSON.");
+        }
+      };
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>

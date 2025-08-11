@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Parser de expresión ZykovLang (pre-prototipo)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; max-width: 900px; }
+    textarea, input { width: 100%; box-sizing: border-box; font-size: 14px; }
+    textarea { min-height: 110px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+    .muted { color: #666; font-size: 12px; }
+    button { padding: 8px 12px; cursor: pointer; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .chip { border:1px solid #ccc; border-radius:999px; padding:4px 10px; font-size:13px; }
+  </style>
+</head>
+<body>
+  <h1>Pre-prototipo: parser de nodos y tópicos</h1>
+  <p class="muted">Escribe una expresión y obtén dos listas: <strong>nodos</strong> y <strong>tópicos</strong>. No mezcla tópicos como nodos.</p>
+
+  <div class="card">
+    <label for="expr"><strong>Expresión</strong></label>
+    <textarea id="expr">A :::: topico1 * (nodo1 + nodo2) + B :::: topico2 * (nodo2 + nodo3) + nodo3 * nodo4</textarea>
+    <div style="margin-top:10px; display:flex; gap:8px;">
+      <button onclick="run()">Parsear</button>
+      <button onclick="ejemplo2()">Ejemplo 2</button>
+      <button onclick="limpiar()">Limpiar</button>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:16px;">
+    <div class="card">
+      <h3>Nodos</h3>
+      <div id="nodes-chips" class="chips"></div>
+      <pre id="nodes-json" class="muted"></pre>
+    </div>
+    <div class="card">
+      <h3>Tópicos</h3>
+      <div id="topics-chips" class="chips"></div>
+      <pre id="topics-json" class="muted"></pre>
+    </div>
+  </div>
+
+  <script>
+    // Parser "hack-bueno": identifica bloques con ':::: topic', registra el tópico,
+    // limpia la expresión y luego extrae nodos sin confundirlos con tópicos.
+    function extractNodesAndTopics(expression) {
+      const nodes = new Set();
+      const topics = new Set();
+
+      let cleaned = expression;
+
+      // 1) Caso con paréntesis:  A :::: topic * (a + b*c)
+      cleaned = cleaned.replace(
+        /\b([A-Za-z0-9_]+)\s*::::\s*([A-Za-z0-9_]+)\s*\*\s*\(([^)]*)\)/g,
+        (_m, leftNode, topic, group) => {
+          const n = (leftNode || '').trim();
+          const t = (topic || '').trim();
+          if (t) topics.add(t);
+          if (n && n !== t) nodes.add(n);
+          // todos los del grupo son nodos, jamás tópicos
+          group.split(/[+*]/).forEach(tok => {
+            const v = (tok || '').trim();
+            if (v && v !== t) nodes.add(v);
+          });
+          // Reemplazar por versión sin ':::: topic' para seguir limpiando
+          return `${n} * (${group})`;
+        }
+      );
+
+      // 2) Caso sin paréntesis: A :::: topic * B
+      cleaned = cleaned.replace(
+        /\b([A-Za-z0-9_]+)\s*::::\s*([A-Za-z0-9_]+)\s*\*\s*([A-Za-z0-9_]+)/g,
+        (_m, leftNode, topic, single) => {
+          const n = (leftNode || '').trim();
+          const t = (topic || '').trim();
+          const s = (single || '').trim();
+          if (t) topics.add(t);
+          if (n && n !== t) nodes.add(n);
+          if (s && s !== t) nodes.add(s);
+          return `${n} * ${s}`;
+        }
+      );
+
+      // 3) Caso mínimo: A :::: topic (sin '* ...')
+      cleaned = cleaned.replace(
+        /\b([A-Za-z0-9_]+)\s*::::\s*([A-Za-z0-9_]+)/g,
+        (_m, leftNode, topic) => {
+          const n = (leftNode || '').trim();
+          const t = (topic || '').trim();
+          if (t) topics.add(t);
+          if (n && n !== t) nodes.add(n);
+          return `${n}`;
+        }
+      );
+
+      // 4) Extraer nodos restantes del string limpio (separando por todo excepto [A-Za-z0-9_])
+      cleaned.split(/[^A-Za-z0-9_]+/).forEach(tok => {
+        const v = (tok || '').trim();
+        if (!v) return;
+        if (!topics.has(v)) nodes.add(v); // nunca incluir tópicos como nodos
+      });
+
+      // Resultado ordenado (opcional)
+      const finalNodes = [...nodes].filter(n => n && !topics.has(n)).sort();
+      const finalTopics = [...topics].sort();
+
+      return { nodes: finalNodes, topics: finalTopics };
+    }
+
+    function renderLists({ nodes, topics }) {
+      const nodesChips = document.getElementById('nodes-chips');
+      const topicsChips = document.getElementById('topics-chips');
+      nodesChips.innerHTML = nodes.map(n => `<span class="chip">${n}</span>`).join('');
+      topicsChips.innerHTML = topics.map(t => `<span class="chip">${t}</span>`).join('');
+      document.getElementById('nodes-json').textContent = JSON.stringify(nodes, null, 2);
+      document.getElementById('topics-json').textContent = JSON.stringify(topics, null, 2);
+    }
+
+    function run() {
+      const expr = document.getElementById('expr').value || '';
+      const res = extractNodesAndTopics(expr);
+      renderLists(res);
+    }
+
+    function ejemplo2() {
+      const ex = `customize :::: avanzado * (editarNodo + crearGrafo + editarContenido + agregarFonts)
+        + A :::: temaA * (x + y*z)
+        + B :::: temaB * w
+        + x * Z_extra`;
+      document.getElementById('expr').value = ex;
+      run();
+    }
+
+    function limpiar() {
+      document.getElementById('expr').value = '';
+      renderLists({ nodes: [], topics: [] });
+    }
+
+    // Auto-parse inicial
+    run();
+  </script>
+</body>
+</html>

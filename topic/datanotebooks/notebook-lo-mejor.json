@@ -1,0 +1,125 @@
+{
+  "name": "",
+  "expression": "A :::: theme * (B + C) + D :::: topic * (viva + laVida + loca + B) + B*oreo*res",
+  "nodes": {
+    "boat": {
+      "title": "add title",
+      "text": ""
+    },
+    "car": {
+      "title": "add title",
+      "text": ""
+    },
+    "dishwasher": {
+      "title": "add title",
+      "text": ""
+    },
+    "driving_products": {
+      "title": "add title",
+      "text": ""
+    },
+    "droid": {
+      "title": "add title",
+      "text": ""
+    },
+    "house_machines": {
+      "title": "add title",
+      "text": ""
+    },
+    "new_products": {
+      "title": "add title",
+      "text": ""
+    },
+    "plain": {
+      "title": "add title",
+      "text": ""
+    },
+    "robot": {
+      "title": "add title",
+      "text": ""
+    },
+    "robot_products": {
+      "title": "add title",
+      "text": ""
+    },
+    "talkMachine": {
+      "title": "add title",
+      "text": ""
+    },
+    "vacumcleaner": {
+      "title": "add title",
+      "text": ""
+    },
+    "A": {
+      "title": "Lo mejor",
+      "text": "esto es lo maximo, increible.",
+      "image": ""
+    },
+    "D": {
+      "title": "unico",
+      "text": "jamas visto, wow.",
+      "image": ""
+    },
+    "B": {
+      "title": "W de Warhol",
+      "text": "Si Andy Warhol estuviera vivo, usaria zygrafi.",
+      "image": ""
+    },
+    "C": {
+      "title": "increible",
+      "text": "realmente simple increible su edicion de facil.",
+      "image": ""
+    },
+    "viva": {
+      "title": "viva",
+      "text": "la vida enlazada en notas que podemos recordar y experienciar en un recorrido conexo.",
+      "image": ""
+    },
+    "laVida": {
+      "title": "La vida",
+      "text": "La vida es como decia Locomia: locobox ,locobox.",
+      "image": ""
+    },
+    "loca": {
+      "title": "Locomia",
+      "text": "Unico como el estilo del grupo locomia: lleno de glamour, diseño y amor por lo visual como experiencia.",
+      "image": ""
+    },
+    "oreo": {
+      "title": "Oreo",
+      "text": "Como las galletas, zygrafi es adicivo una vez que lo pruebas.",
+      "image": ""
+    },
+    "res": {
+      "title": "Reset",
+      "text": "Resetea tu manera de pensar en las notas y sumergete en la experiencia Zygrafi. Vuelvete el curador de tu propia experiencia.",
+      "image": ""
+    }
+  },
+  "topics": {
+    "all_products": {
+      "title": "add title",
+      "description": ""
+    },
+    "house": {
+      "title": "add title",
+      "description": ""
+    },
+    "robots": {
+      "title": "add title",
+      "description": ""
+    },
+    "vehicles": {
+      "title": "add title",
+      "description": ""
+    },
+    "__All": {
+      "title": "topic",
+      "description": "Puedes tu mismo establecer el contenido de tus colecciones y dar vida al recorrido de lo que a ti te importa conectar y registrar."
+    }
+  },
+  "all": {
+    "title": "Un grafo increible para personas increibles",
+    "description": "Aqui seras testigo de una nueva manera de explorar redes de notas, pero no cualquier nota; sino las notas que te importan."
+  }
+}

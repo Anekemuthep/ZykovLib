@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Zigrafi Lab - Libreta Editable</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    h2 { margin-top: 30px; }
+    label { display: block; margin: 10px 0 5px; font-weight: bold; }
+    input[type="text"], textarea { width: 100%; padding: 8px; margin-bottom: 10px; font-family: monospace; }
+    button { margin-right: 10px; padding: 6px 12px; font-weight: bold; }
+    .nav-buttons button { margin-right: 5px; }
+    .highlight { background: #ddd; padding: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Zigrafi Lab - Libreta Editable</h1>
+
+  <label>Título General</label>
+  <input type="text" id="titleField">
+
+  <label>Texto General</label>
+  <textarea id="textField" rows="5"></textarea>
+
+  <hr>
+  <h2>Nodos</h2>
+  <div class="nav-buttons">
+    <button onclick="prevNode()">⏪</button>
+    <button onclick="nextNode()">⏩</button>
+    <button onclick="addNode()">➕ Nodo</button>
+  </div>
+  <label>ID del nodo</label>
+  <input type="text" id="nodeId" readonly>
+
+  <label>Título del nodo</label>
+  <input type="text" id="nodeTitle">
+
+  <label>Texto del nodo</label>
+  <textarea id="nodeText" rows="3"></textarea>
+
+  <hr>
+  <h2>Temas</h2>
+  <div class="nav-buttons">
+    <button onclick="prevTopic()">⏪</button>
+    <button onclick="nextTopic()">⏩</button>
+    <button onclick="addTopic()">➕ Tópico</button>
+  </div>
+  <label>ID del tópico</label>
+  <input type="text" id="topicId" readonly>
+
+  <label>Título del tópico</label>
+  <input type="text" id="topicTitle">
+
+  <label>Texto del tópico</label>
+  <textarea id="topicText" rows="3"></textarea>
+
+  <hr>
+  <button onclick="saveJson()">💾 Guardar JSON</button>
+  <input type="file" accept="application/json" onchange="loadJson(event)">
+  <span id="filename" class="highlight"></span>
+
+  <script>
+    let currentNodeIndex = 0;
+    let currentTopicIndex = 0;
+    let data = {
+      expression: "masOpciones :::: avanzado * customizaGrafo",
+      nodeData: {
+        customizaGrafo: { title: "Customiza tu grafo", text: "Puedes modificar nodos, conexiones y estilo visual." },
+        masOpciones: { title: "Más opciones", text: "Explora herramientas adicionales y temas avanzados." }
+      },
+      topicData: {
+        avanzado: { title: "Avanzado", text: "Accede a funciones expertas para análisis semántico complejo." }
+      },
+      todoData: {
+        title: "¡Bienvenido a Zigrafi!",
+        text: "Puedes editar esta libreta, agregar nodos y temas, y guardarla como un archivo JSON."
+      }
+    };
+    let originalNodeIds = new Set(Object.keys(data.nodeData));
+    let originalTopicIds = new Set(Object.keys(data.topicData));
+
+    function refreshMain() {
+      document.getElementById("titleField").value = data.todoData.title;
+      document.getElementById("textField").value = data.todoData.text;
+    }
+
+    function refreshNode() {
+      const ids = Object.keys(data.nodeData);
+      const id = ids[currentNodeIndex];
+      const node = data.nodeData[id];
+      document.getElementById("nodeId").value = id;
+      document.getElementById("nodeTitle").value = node.title;
+      document.getElementById("nodeText").value = node.text;
+    }
+
+    function refreshTopic() {
+      const ids = Object.keys(data.topicData);
+      const id = ids[currentTopicIndex];
+      const topic = data.topicData[id];
+      document.getElementById("topicId").value = id;
+      document.getElementById("topicTitle").value = topic.title;
+      document.getElementById("topicText").value = topic.text;
+    }
+
+    function prevNode() {
+      saveCurrentNode();
+      currentNodeIndex = (currentNodeIndex - 1 + Object.keys(data.nodeData).length) % Object.keys(data.nodeData).length;
+      refreshNode();
+    }
+
+    function nextNode() {
+      saveCurrentNode();
+      currentNodeIndex = (currentNodeIndex + 1) % Object.keys(data.nodeData).length;
+      refreshNode();
+    }
+
+    function prevTopic() {
+      saveCurrentTopic();
+      currentTopicIndex = (currentTopicIndex - 1 + Object.keys(data.topicData).length) % Object.keys(data.topicData).length;
+      refreshTopic();
+    }
+
+    function nextTopic() {
+      saveCurrentTopic();
+      currentTopicIndex = (currentTopicIndex + 1) % Object.keys(data.topicData).length;
+      refreshTopic();
+    }
+
+    function addNode() {
+      const newId = prompt("ID del nuevo nodo:");
+      if (newId && !data.nodeData[newId]) {
+        data.nodeData[newId] = { title: "", text: "" };
+        currentNodeIndex = Object.keys(data.nodeData).length - 1;
+        refreshNode();
+      }
+    }
+
+    function addTopic() {
+      const newId = prompt("ID del nuevo tópico:");
+      if (newId && !data.topicData[newId]) {
+        data.topicData[newId] = { title: "", text: "" };
+        currentTopicIndex = Object.keys(data.topicData).length - 1;
+        refreshTopic();
+      }
+    }
+
+    function saveCurrentNode() {
+      const id = document.getElementById("nodeId").value;
+      data.nodeData[id] = {
+        title: document.getElementById("nodeTitle").value,
+        text: document.getElementById("nodeText").value
+      };
+    }
+
+    function saveCurrentTopic() {
+      const id = document.getElementById("topicId").value;
+      data.topicData[id] = {
+        title: document.getElementById("topicTitle").value,
+        text: document.getElementById("topicText").value
+      };
+    }
+
+    function saveJson() {
+      saveCurrentNode();
+      saveCurrentTopic();
+      data.todoData.title = document.getElementById("titleField").value;
+      data.todoData.text = document.getElementById("textField").value;
+
+      // eliminar datos agregados temporalmente si ya están salvados en json
+      Object.keys(data.nodeData).forEach(id => {
+        if (!originalNodeIds.has(id)) {
+          originalNodeIds.add(id);
+        }
+      });
+      Object.keys(data.topicData).forEach(id => {
+        if (!originalTopicIds.has(id)) {
+          originalTopicIds.add(id);
+        }
+      });
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "libreta-zygrafi.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      document.getElementById("filename").textContent = "libreta-zygrafi.json";
+    }
+
+    function loadJson(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = event => {
+        data = JSON.parse(event.target.result);
+        originalNodeIds = new Set(Object.keys(data.nodeData));
+        originalTopicIds = new Set(Object.keys(data.topicData));
+        currentNodeIndex = 0;
+        currentTopicIndex = 0;
+        refreshMain();
+        refreshNode();
+        refreshTopic();
+        document.getElementById("filename").textContent = file.name;
+      };
+      reader.readAsText(file);
+    }
+
+    refreshMain();
+    refreshNode();
+    refreshTopic();
+  </script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+{
+  "name": "",
+  "expression": "A :::: theme * (B + C) + D :::: topic * (viva + laVida + loca + B) + B*oreo*res",
+  "nodes": {
+    "boat": {
+      "title": "add title",
+      "text": ""
+    },
+    "car": {
+      "title": "add title",
+      "text": ""
+    },
+    "dishwasher": {
+      "title": "add title",
+      "text": ""
+    },
+    "driving_products": {
+      "title": "add title",
+      "text": ""
+    },
+    "droid": {
+      "title": "add title",
+      "text": ""
+    },
+    "house_machines": {
+      "title": "add title",
+      "text": ""
+    },
+    "new_products": {
+      "title": "add title",
+      "text": ""
+    },
+    "plain": {
+      "title": "add title",
+      "text": ""
+    },
+    "robot": {
+      "title": "add title",
+      "text": ""
+    },
+    "robot_products": {
+      "title": "add title",
+      "text": ""
+    },
+    "talkMachine": {
+      "title": "add title",
+      "text": ""
+    },
+    "vacumcleaner": {
+      "title": "add title",
+      "text": ""
+    },
+    "A": {
+      "title": "Lo mejor",
+      "text": "Aqui veras un grafo con el que podras editar no solo notas; sino una experiencia.",
+      "image": ""
+    },
+    "D": {
+      "title": "Unico",
+      "text": "En zigrafi, preparate para editar una experiencia conexa de lo que anotas y te importa anotar.",
+      "image": ""
+    },
+    "res": {
+      "title": "Ergo scritum",
+      "text": "Escribe lo que te apasiona y crea una experiencia de exploracion.",
+      "image": ""
+    },
+    "oreo": {
+      "title": "Oreo",
+      "text": "Como las galletas, una vez que empieces a usar zygrafi, no dejaras de esribir tus museos conexos.",
+      "image": ""
+    },
+    "loca": {
+      "title": "Locomia",
+      "text": "Al igual que el icónico grupo, nuestra obsesion es tu experiencia en un recorrido visual que cautive tu memoria e imaginacion.",
+      "image": ""
+    },
+    "laVida": {
+      "title": "La vida",
+      "text": "Imagina anotanto cada cosa que te importa y teniendo un museo para recorrerlo. Eso es Zygrafi.",
+      "image": ""
+    },
+    "viva": {
+      "title": "Viva",
+      "text": "Una red viva de experiencias bajo una narrativa que tiene la estetica de como sentiste sus conexiones.",
+      "image": ""
+    },
+    "B": {
+      "title": "W de Warhol",
+      "text": "Si Andy Wharol estuviera vivo, el usaria Zygrafi.",
+      "image": ""
+    },
+    "C": {
+      "title": "Lo increible",
+      "text": "Lo increible de estar vivo es lo increible de conectar el mundo y las ideas, y eso, zigrafi te lo puede dar: olver a conectar con lo inceible, lo que te asombra.",
+      "image": ""
+    }
+  },
+  "topics": {
+    "all_products": {
+      "title": "add title",
+      "description": ""
+    },
+    "house": {
+      "title": "add title",
+      "description": ""
+    },
+    "robots": {
+      "title": "add title",
+      "description": ""
+    },
+    "vehicles": {
+      "title": "add title",
+      "description": ""
+    },
+    "__All": {
+      "title": "Que veras aqui",
+      "description": "Veras un grafo unico para gente unica."
+    },
+    "topic": {
+      "title": "topic",
+      "description": "edita tus propios topicos de acuerdo a lo que mas te gusta."
+    },
+    "theme": {
+      "title": "theme",
+      "description": "puedes ser tu propio track dj de los topicos que defines."
+    }
+  },
+  "all": {
+    "title": "Que veras aqui",
+    "description": "Veras un grafo unico para gente unica."
+  }
+}
